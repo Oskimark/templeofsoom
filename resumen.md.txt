@@ -1,0 +1,65 @@
+Prompt de Desarrollo: Proyecto "Temple of Doom Clone"
+1. Descripción General
+Crear un juego de plataformas de acción en 2D inspirado en Temple of Doom. El jugador debe escalar una torre vertical infinita o por niveles, evitando trampas, recolectando tesoros y escapando de una amenaza ascendente (lava o pinchos).
+
+2. Especificaciones Técnicas
+Lenguaje: JavaScript / TypeScript.
+
+Framework sugerido: Phaser.js (Estructura de escenas).
+
+Resolución: 400x600 (Aspect ratio vertical para móvil/web).
+
+Estilo Visual: Pixel art de 8/16 bits.
+
+3. Mecánicas del Jugador
+El personaje debe tener una respuesta de control ágil y "pesada" a la vez.
+
+Movimiento: Izquierda y Derecha (Teclas de flecha o A/D).
+
+Salto: Barra espaciadora o Flecha arriba. Permitir Coyote Time (salto breve tras dejar una plataforma).
+
+Habilidad Especial: Látigo o gancho para balancearse o golpear enemigos (opcional según dificultad).
+
+Sistema de Vida: El jugador muere al ser tocado por un enemigo, trampa o al caer en la zona inferior de la pantalla.
+
+4. Generación de Escenario (Level Design)
+El juego debe utilizar un sistema de Generación Procedural por Bloques:
+
+Chunks: Crear 10 variantes de niveles (bloques de 400x400 px).
+
+Plataformas: Mezcla de plataformas sólidas, plataformas que se rompen al pisarlas y plataformas móviles.
+
+Peligros Ambientales:
+
+Pinchos: Estáticos en suelos o techos.
+
+Dardos: Disparadores en las paredes con un setInterval.
+
+Lava Ascendente: Una capa inferior que sube de velocidad gradualmente según el puntaje.
+
+5. Lógica del Juego (Game Loop)
+Menú de Inicio: Botón "Play" y "High Score".
+
+Estado de Juego:
+
+Cálculo de puntaje basado en la altura alcanzada.
+
+Spawn de enemigos (murciélagos o esqueletos) en rangos de altura específicos.
+
+Recolección de monedas/ídolos para multiplicar el puntaje.
+
+Game Over: Pantalla de reinicio que guarda el puntaje en el localStorage.
+
+6. Estructura de Archivos Solicitada
+Solicito que el código se organice de la siguiente manera:
+
+Preloader.js: Carga de assets (spritesheets, sonidos).
+
+Player.js: Clase extendida para la física y animaciones del personaje.
+
+LevelManager.js: Lógica de generación de plataformas y reciclaje de objetos (Object Pooling).
+
+MainScene.js: Orquestación del juego y colisiones.
+
+7. Instrucción Final para la IA
+"Actúa como un desarrollador senior de videojuegos. Genera el código necesario para implementar la escena principal y la lógica del jugador utilizando Phaser.js. Prioriza un sistema de colisiones limpio y asegúrate de que el movimiento se sienta fluido para Windows 10. No incluyas configuraciones para Mac."
