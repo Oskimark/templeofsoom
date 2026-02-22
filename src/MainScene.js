@@ -31,7 +31,9 @@ export default class MainScene extends Phaser.Scene {
 
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0, 0.1, 0, 100);
-        // Removed setBounds to allow infinite vertical scrolling upwards properly
+
+        // Allow infinite upwards and downwards movement by disabling top/bottom world bounds
+        this.physics.world.setBoundsCollision(true, true, false, false);
 
         // Collisions
         this.physics.add.collider(this.player, this.levelManager.platforms);

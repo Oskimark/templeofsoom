@@ -15,13 +15,20 @@ export default class LevelManager {
         // Create starting floor (Safe zone)
         this.platforms.create(200, 580, 'platform').setScale(7, 2).refreshBody();
         // Safe starting platforms
-        this.platforms.create(100, 480, 'platform');
-        this.platforms.create(300, 380, 'platform');
+        this.makeOneWay(this.platforms.create(100, 480, 'platform'));
+        this.makeOneWay(this.platforms.create(300, 380, 'platform'));
 
         // Initial chunks
         this.generateNextChunk();
         this.generateNextChunk();
         this.generateNextChunk();
+    }
+
+    makeOneWay(platform) {
+        platform.body.checkCollision.down = false;
+        platform.body.checkCollision.left = false;
+        platform.body.checkCollision.right = false;
+        return platform;
     }
 
     update(cameraY) {
@@ -70,6 +77,7 @@ export default class LevelManager {
                 } else {
                     plat = this.platforms.create(x, y, 'platform');
                 }
+                this.makeOneWay(plat);
 
                 // Add spikes sometimes
                 if (!isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.02)) {
