@@ -5,6 +5,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     init(data) {
         this.finalScore = data.score || 0;
+        this.level = data.level || 1;
     }
 
     create() {
@@ -17,7 +18,7 @@ export default class GameOverScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, height / 2, `Score: ${this.finalScore}`, {
+        this.add.text(width / 2, height / 2, `Level: ${this.level} - Score: ${this.finalScore}`, {
             fontSize: '24px',
             fill: '#fff'
         }).setOrigin(0.5);

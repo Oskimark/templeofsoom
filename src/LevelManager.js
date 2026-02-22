@@ -5,13 +5,16 @@ export default class LevelManager {
         this.breakablePlatforms = scene.physics.add.staticGroup();
         this.spikes = scene.physics.add.staticGroup();
         this.coins = scene.physics.add.group({ allowGravity: false });
-        this.jetpacks = scene.physics.add.group({ allowGravity: false }); // New Jetpack group
+        this.jetpacks = scene.physics.add.group({ allowGravity: false });
         this.enemies = scene.physics.add.group({ allowGravity: false });
         this.darts = scene.physics.add.group({ allowGravity: false });
+        this.exits = scene.physics.add.staticGroup(); // Win conditions
 
         this.chunkHeight = 400;
         this.lastChunkY = 300; // Start at y=300 to provide a safe zone for the spawn
         this.gameWidth = 400;
+        this.targetY = scene.levelTargetY; // Imported from scene
+        this.levelFinished = false;
 
         // Create starting floor (Safe zone)
         this.platforms.create(200, 580, 'platform').setScale(7, 2).refreshBody();
@@ -59,7 +62,21 @@ export default class LevelManager {
     }
 
     generateNextChunk() {
+        if (this.levelFinished) return;
+
         const chunkTopY = this.lastChunkY - this.chunkHeight;
+
+        // Check level end
+        if (chunkTopY <= this.targetY) {
+            this.levelFinished = true;
+            // Spawn safe giant platform at the finish line
+            const safeBase = this.platforms.create(200, this.targetY, 'platform').setScale(7, 2).refreshBody();
+            this.makeOneWay(safeBase);
+            // Spawn portal
+            this.exits.create(200, this.targetY - 80, 'portal');
+            this.lastChunkY = this.targetY;
+            return;
+        }
 
         // Decide difficulty based on height (lower Y = higher altitude)
         const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));

@@ -6,13 +6,32 @@ export default class MainScene extends Phaser.Scene {
         super('MainScene');
     }
 
+    init(data) {
+        this.level = data.level || 1;
+        this.score = data.score || 0;
+    }
+
     create() {
-        this.score = 0;
         this.maxHeight = 0;
+        this.levelTargetY = -4000 - (this.level * 2000); // Level 1 is -6000
+
+        // Setting up level specific palettes
+        let bgmKey = 'bg_music_1';
+        let lavaTexture = 'lava';
+
+        if (this.level % 2 === 0) { // Even levels
+            bgmKey = 'bg_music_2';
+            this.cameras.main.setBackgroundColor('#1a0033'); // Dark purple bg
+            lavaTexture = 'lava_2';
+        } else { // Odd levels
+            bgmKey = 'bg_music_1';
+            this.cameras.main.setBackgroundColor('#000000'); // Black bg
+            lavaTexture = 'lava';
+        }
 
         // Lava
         this.lavaHeight = 800; // Start lava far down
-        this.lavaSpeed = 20;
+        this.lavaSpeed = 20 + (this.level * 5); // Faster base lava on higher levels
 
         this.levelManager = new LevelManager(this);
 
@@ -20,7 +39,6 @@ export default class MainScene extends Phaser.Scene {
         this.player = new Player(this, 200, 500);
 
         // Audio
-        const bgmKey = Math.random() < 0.5 ? 'bg_music_1' : 'bg_music_2';
         this.bgMusic = this.sound.add(bgmKey, { volume: 0.5, loop: true });
         this.explosionSound = this.sound.add('explosion', { volume: 0.8 });
 
@@ -29,7 +47,7 @@ export default class MainScene extends Phaser.Scene {
         this.bgMusic.play();
 
         // UI
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
+        this.scoreText = this.add.text(16, 16, `Level: ${this.level} - Score: ${this.score}`, { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
         this.scoreText.setDepth(100);
 
         // Jetpack UI
@@ -37,8 +55,14 @@ export default class MainScene extends Phaser.Scene {
         this.fuelBarBg = this.add.rectangle(75, 55, 100, 15, 0x555555).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
         this.fuelBar = this.add.rectangle(75, 55, 0, 15, 0x00bfff).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
+        // Level Progress UI
+        const width = this.cameras.main.width;
+        this.progressBg = this.add.rectangle(width / 2, 25, 180, 15, 0x444444).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(100);
+        this.progressBar = this.add.rectangle(width / 2 - 90, 25, 0, 15, 0x00ff00).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
+        this.progressText = this.add.text(width / 2, 25, '0%', { fontSize: '12px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(100);
+
         // Lava Graphic
-        this.lava = this.add.image(200, this.lavaHeight, 'lava').setOrigin(0.5, 0).setDepth(50);
+        this.lava = this.add.image(200, this.lavaHeight, lavaTexture).setOrigin(0.5, 0).setDepth(50);
         this.physics.add.existing(this.lava);
         this.lava.body.setAllowGravity(false);
         this.lava.body.setImmovable(true);
@@ -59,9 +83,10 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.levelManager.darts, this.die, null, this);
         this.physics.add.overlap(this.player, this.levelManager.enemies, this.die, null, this);
 
-        // Items
+        // Items & Exits
         this.physics.add.overlap(this.player, this.levelManager.coins, this.collectCoin, null, this);
         this.physics.add.overlap(this.player, this.levelManager.jetpacks, this.collectJetpack, null, this);
+        this.physics.add.overlap(this.player, this.levelManager.exits, this.finishLevel, null, this);
     }
 
     update(time, delta) {
@@ -99,6 +124,17 @@ export default class MainScene extends Phaser.Scene {
         // Update Fuel UI
         const fuelPercentage = this.player.jetpackFuel / this.player.maxJetpackFuel;
         this.fuelBar.width = 100 * fuelPercentage;
+
+        // Update Level Progress UI
+        const startY = 500; // where the player starts
+        const totalDistance = startY - this.levelTargetY;
+        const currentDistance = startY - this.player.y;
+
+        let progress = currentDistance / totalDistance;
+        progress = Phaser.Math.Clamp(progress, 0, 1);
+
+        this.progressBar.width = 180 * progress;
+        this.progressText.setText(Math.floor(progress * 100) + '%');
     }
 
     hitBreakable(player, platform) {
@@ -127,7 +163,18 @@ export default class MainScene extends Phaser.Scene {
     updateScore(add = 0) {
         // Calculate total score = maxHeight + collected items
         const total = this.maxHeight + this.score;
-        this.scoreText.setText('Score: ' + total);
+        this.scoreText.setText(`Level: ${this.level} - Score: ${total}`);
+    }
+
+    finishLevel() {
+        this.player.setActive(false).setVisible(false);
+        this.physics.pause();
+        this.bgMusic.stop();
+        this.cameras.main.flash(500, 255, 255, 255);
+        this.time.delayedCall(1000, () => {
+            const totalScore = this.maxHeight + this.score;
+            this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
+        }, [], this);
     }
 
     die() {
@@ -142,7 +189,7 @@ export default class MainScene extends Phaser.Scene {
         const totalScore = this.maxHeight + this.score;
 
         this.time.delayedCall(1000, () => {
-            this.scene.start('GameOverScene', { score: totalScore });
+            this.scene.start('GameOverScene', { score: totalScore, level: this.level });
         }, [], this);
     }
 }

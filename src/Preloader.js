@@ -2,12 +2,14 @@ export default class Preloader extends Phaser.Scene {
     constructor() {
         super('Preloader');
     }
-
     preload() {
         // Load Audio
         this.load.audio('bg_music_1', 'music/Event_Horizon_Cascade.mp3');
         this.load.audio('bg_music_2', 'music/Tribal_Apex.mp3');
         this.load.audio('explosion', 'music/explosion.mp3');
+
+        // Load Images
+        this.load.image('portada', 'images/portada.png');
         // Create basic textures for the game programmatically
         // Player texture (a small square/rectangle)
         const playerGraphics = this.make.graphics();
@@ -55,11 +57,23 @@ export default class Preloader extends Phaser.Scene {
         coinGraphics.fillCircle(8, 8, 8);
         coinGraphics.generateTexture('coin', 16, 16);
 
-        // Lava texture
+        // Lava texture 1 (Orange/Red)
         const lavaGraphics = this.make.graphics();
         lavaGraphics.fillStyle(0xff4500, 0.8);
         lavaGraphics.fillRect(0, 0, 400, 800);
         lavaGraphics.generateTexture('lava', 400, 800);
+
+        // Lava texture 2 (Cyan/Blue)
+        const lavaGraphics2 = this.make.graphics();
+        lavaGraphics2.fillStyle(0x00ffff, 0.8);
+        lavaGraphics2.fillRect(0, 0, 400, 800);
+        lavaGraphics2.generateTexture('lava_2', 400, 800);
+
+        // Portal texture
+        const portalGraphics = this.make.graphics();
+        portalGraphics.fillStyle(0xffffff, 0.7);
+        portalGraphics.fillEllipse(32, 64, 64, 128); // width 64
+        portalGraphics.generateTexture('portal', 64, 128);
 
         // Jetpack texture
         const jetpackGraphics = this.make.graphics();
