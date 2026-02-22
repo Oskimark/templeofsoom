@@ -11,7 +11,7 @@ export default class MainScene extends Phaser.Scene {
         this.maxHeight = 0;
 
         // Lava
-        this.lavaHeight = 600;
+        this.lavaHeight = 800; // Start lava far down
         this.lavaSpeed = 20;
 
         this.levelManager = new LevelManager(this);
@@ -31,7 +31,7 @@ export default class MainScene extends Phaser.Scene {
 
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0, 0.1, 0, 100);
-        this.cameras.main.setBounds(0, -Infinity, 400, 600);
+        // Removed setBounds to allow infinite vertical scrolling upwards properly
 
         // Collisions
         this.physics.add.collider(this.player, this.levelManager.platforms);

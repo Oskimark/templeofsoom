@@ -9,11 +9,14 @@ export default class LevelManager {
         this.darts = scene.physics.add.group({ allowGravity: false });
 
         this.chunkHeight = 400;
-        this.lastChunkY = 600; // Start at bottom screen
+        this.lastChunkY = 300; // Start at y=300 to provide a safe zone for the spawn
         this.gameWidth = 400;
 
-        // Create starting floor
+        // Create starting floor (Safe zone)
         this.platforms.create(200, 580, 'platform').setScale(7, 2).refreshBody();
+        // Safe starting platforms
+        this.platforms.create(100, 480, 'platform');
+        this.platforms.create(300, 380, 'platform');
 
         // Initial chunks
         this.generateNextChunk();

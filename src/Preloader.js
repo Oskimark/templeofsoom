@@ -54,8 +54,8 @@ export default class Preloader extends Phaser.Scene {
         // Lava texture
         const lavaGraphics = this.make.graphics();
         lavaGraphics.fillStyle(0xff4500, 0.8);
-        lavaGraphics.fillRect(0, 0, 400, 100);
-        lavaGraphics.generateTexture('lava', 400, 100);
+        lavaGraphics.fillRect(0, 0, 400, 800);
+        lavaGraphics.generateTexture('lava', 400, 800);
     }
 
     create() {
