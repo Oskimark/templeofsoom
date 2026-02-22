@@ -5,6 +5,7 @@ export default class LevelManager {
         this.breakablePlatforms = scene.physics.add.staticGroup();
         this.spikes = scene.physics.add.staticGroup();
         this.coins = scene.physics.add.group({ allowGravity: false });
+        this.jetpacks = scene.physics.add.group({ allowGravity: false }); // New Jetpack group
         this.enemies = scene.physics.add.group({ allowGravity: false });
         this.darts = scene.physics.add.group({ allowGravity: false });
 
@@ -42,6 +43,7 @@ export default class LevelManager {
         this.cleanup(this.breakablePlatforms, cameraY);
         this.cleanup(this.spikes, cameraY);
         this.cleanup(this.coins, cameraY);
+        this.cleanup(this.jetpacks, cameraY);
         this.cleanup(this.enemies, cameraY);
         this.cleanup(this.darts, cameraY);
 
@@ -87,6 +89,11 @@ export default class LevelManager {
                 // Add coins sometimes
                 if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
                     this.coins.create(x, y - 30, 'coin');
+                }
+
+                // Add jetpacks rarely (5% chance per platform)
+                if (Phaser.Math.FloatBetween(0, 1) < 0.05) {
+                    this.jetpacks.create(x, y - 30, 'jetpack');
                 }
             }
 

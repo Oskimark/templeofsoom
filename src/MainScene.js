@@ -19,9 +19,23 @@ export default class MainScene extends Phaser.Scene {
         // Spawn Player
         this.player = new Player(this, 200, 500);
 
+        // Audio
+        const bgmKey = Math.random() < 0.5 ? 'bg_music_1' : 'bg_music_2';
+        this.bgMusic = this.sound.add(bgmKey, { volume: 0.5, loop: true });
+        this.explosionSound = this.sound.add('explosion', { volume: 0.8 });
+
+        // Ensure starting clean in case of restart
+        this.sound.stopAll();
+        this.bgMusic.play();
+
         // UI
         this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
         this.scoreText.setDepth(100);
+
+        // Jetpack UI
+        this.add.text(16, 46, 'Fuel:', { fontSize: '18px', fill: '#00bfff' }).setScrollFactor(0).setDepth(100);
+        this.fuelBarBg = this.add.rectangle(75, 55, 100, 15, 0x555555).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
+        this.fuelBar = this.add.rectangle(75, 55, 0, 15, 0x00bfff).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
         // Lava Graphic
         this.lava = this.add.image(200, this.lavaHeight, 'lava').setOrigin(0.5, 0).setDepth(50);
@@ -47,6 +61,7 @@ export default class MainScene extends Phaser.Scene {
 
         // Items
         this.physics.add.overlap(this.player, this.levelManager.coins, this.collectCoin, null, this);
+        this.physics.add.overlap(this.player, this.levelManager.jetpacks, this.collectJetpack, null, this);
     }
 
     update(time, delta) {
@@ -80,6 +95,10 @@ export default class MainScene extends Phaser.Scene {
         if (this.player.y > this.cameras.main.scrollY + 650) {
             this.die();
         }
+
+        // Update Fuel UI
+        const fuelPercentage = this.player.jetpackFuel / this.player.maxJetpackFuel;
+        this.fuelBar.width = 100 * fuelPercentage;
     }
 
     hitBreakable(player, platform) {
@@ -96,6 +115,15 @@ export default class MainScene extends Phaser.Scene {
         this.updateScore();
     }
 
+    collectJetpack(player, jetpack) {
+        jetpack.destroy();
+        // Give 50 fuel unit per collectible
+        player.addJetpackFuel(50);
+
+        // Visual feedback
+        this.cameras.main.flash(200, 0, 191, 255); // Blue flash
+    }
+
     updateScore(add = 0) {
         // Calculate total score = maxHeight + collected items
         const total = this.maxHeight + this.score;
@@ -105,6 +133,9 @@ export default class MainScene extends Phaser.Scene {
     die() {
         this.player.setActive(false).setVisible(false);
         this.physics.pause();
+
+        this.bgMusic.stop();
+        this.explosionSound.play();
 
         this.cameras.main.shake(500, 0.05);
 

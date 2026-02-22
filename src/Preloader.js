@@ -4,6 +4,10 @@ export default class Preloader extends Phaser.Scene {
     }
 
     preload() {
+        // Load Audio
+        this.load.audio('bg_music_1', 'music/Event_Horizon_Cascade.mp3');
+        this.load.audio('bg_music_2', 'music/Tribal_Apex.mp3');
+        this.load.audio('explosion', 'music/explosion.mp3');
         // Create basic textures for the game programmatically
         // Player texture (a small square/rectangle)
         const playerGraphics = this.make.graphics();
@@ -56,6 +60,20 @@ export default class Preloader extends Phaser.Scene {
         lavaGraphics.fillStyle(0xff4500, 0.8);
         lavaGraphics.fillRect(0, 0, 400, 800);
         lavaGraphics.generateTexture('lava', 400, 800);
+
+        // Jetpack texture
+        const jetpackGraphics = this.make.graphics();
+        jetpackGraphics.fillStyle(0x00bfff); // Deep sky blue
+        jetpackGraphics.fillRect(0, 0, 16, 20);
+        jetpackGraphics.fillStyle(0xffffff); // White J
+        // Draw a simple 'J' pixel by pixel or with lines
+        jetpackGraphics.fillRect(10, 2, 2, 12); // Vertical line
+        jetpackGraphics.fillRect(6, 12, 4, 2); // Bottom hook
+        jetpackGraphics.fillRect(4, 8, 2, 4);  // Left hook
+        jetpackGraphics.fillRect(6, 2, 6, 2);  // Top bar
+        jetpackGraphics.fillStyle(0xffa500); // Orange flame
+        jetpackGraphics.fillTriangle(0, 20, 16, 20, 8, 28);
+        jetpackGraphics.generateTexture('jetpack', 16, 28);
     }
 
     create() {
