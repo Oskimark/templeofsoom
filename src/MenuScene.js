@@ -17,23 +17,17 @@ export default class MenuScene extends Phaser.Scene {
         // Slightly darken image so text reads well
         portada.setTint(0xdddddd);
 
-        this.add.text(width / 2, height / 4, 'LAVA JUMP', {
-            fontSize: '48px',
-            fill: '#ff4500',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5);
-
+        // Text removed as it is part of the image
         const highScore = localStorage.getItem('templeHighScore') || 0;
-        this.add.text(width / 2, height / 2, `High Score: ${highScore}`, {
-            fontSize: '22px',
-            fill: '#ffd700',
+        this.add.text(width / 2, height - 60, `${highScore}`, {
+            fontSize: '48px',
+            fill: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 4
+            strokeThickness: 6,
+            fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const playText = this.add.text(width / 2, height / 1.5, 'Click to PLAY', {
+        const playText = this.add.text(width / 2, height - 120, 'Click to PLAY', {
             fontSize: '28px',
             fill: '#00ff00',
             stroke: '#000000',

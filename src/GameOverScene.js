@@ -12,15 +12,20 @@ export default class GameOverScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.add.text(width / 2, height / 3, 'GAME OVER', {
-            fontSize: '48px',
-            fill: '#ff0000',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // Background Cover image
+        const gameOverBg = this.add.image(width / 2, height / 2, 'gameover');
+        // Calculate scaling to cover the whole screen properly
+        const scaleX = width / gameOverBg.width;
+        const scaleY = height / gameOverBg.height;
+        const scale = Math.max(scaleX, scaleY);
+        gameOverBg.setScale(scale).setScrollFactor(0);
+        gameOverBg.setTint(0xdddddd);
 
         this.add.text(width / 2, height / 2, `Level: ${this.level} - Score: ${this.finalScore}`, {
             fontSize: '24px',
-            fill: '#fff'
+            fill: '#fff',
+            stroke: '#000000',
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         // Update High Score
@@ -34,9 +39,11 @@ export default class GameOverScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
-        const retryText = this.add.text(width / 2, height / 1.5, 'Click to Retry', {
-            fontSize: '24px',
-            fill: '#00ff00'
+        const retryText = this.add.text(width / 2, height - 80, 'Click to Retry', {
+            fontSize: '28px',
+            fill: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         retryText.setInteractive();

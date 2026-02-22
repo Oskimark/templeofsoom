@@ -29,16 +29,65 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             d: Phaser.Input.Keyboard.KeyCodes.D,
             space: Phaser.Input.Keyboard.KeyCodes.SPACE
         });
+
+        // Mobile Controls setup
+        this.virtualLeft = false;
+        this.virtualRight = false;
+        this.virtualJump = false;
+        this.virtualJumpJustDown = false;
+        this.virtualJumpJustReleased = false;
+
+        if (scene.sys.game.device.input.touch) {
+            this.createMobileControls(scene);
+        }
+    }
+
+    createMobileControls(scene) {
+        const uiDepth = 1000;
+
+        // Left Button
+        this.btnLeft = scene.add.image(50, 520, 'btn_base')
+            .setScrollFactor(0).setDepth(uiDepth).setInteractive();
+        this.btnLeft.on('pointerdown', () => this.virtualLeft = true);
+        this.btnLeft.on('pointerup', () => this.virtualLeft = false);
+        this.btnLeft.on('pointerout', () => this.virtualLeft = false);
+
+        // Right Button
+        this.btnRight = scene.add.image(130, 520, 'btn_base')
+            .setScrollFactor(0).setDepth(uiDepth).setInteractive();
+        this.btnRight.on('pointerdown', () => this.virtualRight = true);
+        this.btnRight.on('pointerup', () => this.virtualRight = false);
+        this.btnRight.on('pointerout', () => this.virtualRight = false);
+
+        // Jump Button
+        this.btnJump = scene.add.image(350, 520, 'btn_base')
+            .setScrollFactor(0).setDepth(uiDepth).setInteractive();
+
+        this.btnJump.on('pointerdown', () => {
+            this.virtualJump = true;
+            this.virtualJumpJustDown = true;
+        });
+        this.btnJump.on('pointerup', () => {
+            this.virtualJump = false;
+            this.virtualJumpJustReleased = true;
+        });
+        this.btnJump.on('pointerout', () => {
+            this.virtualJump = false;
+            this.virtualJumpJustReleased = true;
+        });
     }
 
     update(time, delta) {
         const isGrounded = this.body.touching.down || this.body.blocked.down;
 
         // Movement logic
-        if (this.cursors.left.isDown || this.keys.a.isDown) {
+        const moveLeft = this.cursors.left.isDown || this.keys.a.isDown || this.virtualLeft;
+        const moveRight = this.cursors.right.isDown || this.keys.d.isDown || this.virtualRight;
+
+        if (moveLeft) {
             this.setAccelerationX(-1500);
             this.setFlipX(true);
-        } else if (this.cursors.right.isDown || this.keys.d.isDown) {
+        } else if (moveRight) {
             this.setAccelerationX(1500);
             this.setFlipX(false);
         } else {
@@ -58,8 +107,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Jump & Jetpack logic
-        const jumpJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.space);
-        const jumpIsDown = this.cursors.up.isDown || this.keys.space.isDown;
+        const jumpJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.space) || this.virtualJumpJustDown;
+        const jumpIsDown = this.cursors.up.isDown || this.keys.space.isDown || this.virtualJump;
+
+        // Reset virtual triggers
+        this.virtualJumpJustDown = false;
 
         // Initial normal jumps
         if (jumpJustDown && this.jumpsLeft > 0) {
@@ -69,7 +121,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Variable jump height (only apply if NOT using jetpack)
-        const jumpJustReleased = Phaser.Input.Keyboard.JustUp(this.cursors.up) || Phaser.Input.Keyboard.JustUp(this.keys.space);
+        const jumpJustReleased = Phaser.Input.Keyboard.JustUp(this.cursors.up) || Phaser.Input.Keyboard.JustUp(this.keys.space) || this.virtualJumpJustReleased;
+        this.virtualJumpJustReleased = false; // Reset vertical trigger
+
         const usingJetpack = jumpIsDown && this.jetpackFuel > 0 && this.jumpsLeft === 0;
 
         if (jumpJustReleased && this.body.velocity.y < 0 && !usingJetpack) {
