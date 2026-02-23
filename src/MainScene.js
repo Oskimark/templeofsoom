@@ -179,8 +179,21 @@ export default class MainScene extends Phaser.Scene {
 
     hitBreakable(player, platform) {
         if (player.body.touching.down && platform.body.touching.up) {
+            const px = platform.x;
+            const py = platform.y;
             this.time.delayedCall(200, () => {
                 platform.destroy();
+                // Respawn as a solid platform after 3 seconds
+                this.time.delayedCall(3000, () => {
+                    let platTexture = 'platform';
+                    if (this.level === 2) platTexture = 'plataforma2';
+                    const newPlat = this.levelManager.platforms.create(px, py, platTexture);
+                    newPlat.setDisplaySize(64, 16).refreshBody();
+                    this.levelManager.makeOneWay(newPlat);
+                    // Fade in effect
+                    newPlat.setAlpha(0);
+                    this.tweens.add({ targets: newPlat, alpha: 1, duration: 500 });
+                }, [], this);
             }, [], this);
         }
     }

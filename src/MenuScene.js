@@ -26,40 +26,48 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5, 1);
 
         // Level Selector Title
-        this.add.text(width / 2, height / 2 + 60, 'SELECCIONA NIVEL', {
-            fontSize: '20px',
+        this.add.text(width / 2, height - 105, 'SELECCIONA NIVEL', {
+            fontSize: '14px',
             fill: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 4,
+            strokeThickness: 3,
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // Level Buttons
         const levelNames = ['Volcán', 'Cielo', 'Espacio'];
         const levelColors = [0xff4500, 0x4488ff, 0x8800ff];
-        const btnY = height / 2 + 110;
-        const btnSpacing = 110;
+        const btnY = height - 70;
+        const btnSpacing = 90;
         const startX = width / 2 - btnSpacing;
+
+        // Story data for each level (shown BEFORE starting that level)
+        const storyData = [
+            null, // Level 1: no story, start directly
+            { storyKey: 'lev1', title: 'ESCAPASTE DEL VOLCÁN', desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...' },
+            { storyKey: 'lev2', noText: true }
+        ];
 
         for (let i = 0; i < 3; i++) {
             const bx = startX + i * btnSpacing;
+            const level = i + 1;
 
             // Button background
-            const btnBg = this.add.rectangle(bx, btnY, 90, 50, levelColors[i], 0.8)
+            const btnBg = this.add.rectangle(bx, btnY, 70, 40, levelColors[i], 0.8)
                 .setStrokeStyle(2, 0xffffff, 0.9)
                 .setInteractive({ useHandCursor: true });
 
             // Button text
-            const btnText = this.add.text(bx, btnY - 8, `${i + 1}`, {
-                fontSize: '24px',
+            const btnText = this.add.text(bx, btnY - 6, `${level}`, {
+                fontSize: '18px',
                 fill: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 3,
                 fontStyle: 'bold'
             }).setOrigin(0.5);
 
-            const btnLabel = this.add.text(bx, btnY + 14, levelNames[i], {
-                fontSize: '11px',
+            const btnLabel = this.add.text(bx, btnY + 12, levelNames[i], {
+                fontSize: '10px',
                 fill: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 2
@@ -78,24 +86,38 @@ export default class MenuScene extends Phaser.Scene {
             });
 
             // Click handler
-            const level = i + 1;
             btnBg.on('pointerdown', () => {
-                this.scene.start('MainScene', { level: level, score: 0 });
+                this.startLevel(level, storyData[i]);
             });
         }
 
         // Keyboard shortcuts
         this.input.keyboard.on('keydown-ONE', () => {
-            this.scene.start('MainScene', { level: 1, score: 0 });
+            this.startLevel(1, storyData[0]);
         });
         this.input.keyboard.on('keydown-TWO', () => {
-            this.scene.start('MainScene', { level: 2, score: 0 });
+            this.startLevel(2, storyData[1]);
         });
         this.input.keyboard.on('keydown-THREE', () => {
-            this.scene.start('MainScene', { level: 3, score: 0 });
+            this.startLevel(3, storyData[2]);
         });
         this.input.keyboard.on('keydown-SPACE', () => {
-            this.scene.start('MainScene', { level: 1, score: 0 });
+            this.startLevel(1, storyData[0]);
         });
+    }
+
+    startLevel(level, story) {
+        if (story) {
+            this.scene.start('StoryScene', {
+                storyKey: story.storyKey,
+                nextLevel: level,
+                score: 0,
+                title: story.title || '',
+                desc: story.desc || '',
+                noText: story.noText || false
+            });
+        } else {
+            this.scene.start('MainScene', { level: level, score: 0 });
+        }
     }
 }

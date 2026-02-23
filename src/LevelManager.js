@@ -80,6 +80,20 @@ export default class LevelManager {
         // Check level end
         if (chunkTopY <= this.targetY) {
             this.levelFinished = true;
+
+            // Add bridging platforms from lastChunkY up to targetY so the portal is always reachable
+            let platTexture = 'platform';
+            if (this.scene.level === 2) platTexture = 'plataforma2';
+
+            let bridgeY = this.lastChunkY - 80;
+            while (bridgeY > this.targetY + 60) {
+                const bx = Phaser.Math.Between(60, this.gameWidth - 60);
+                const bp = this.platforms.create(bx, bridgeY, platTexture);
+                bp.setDisplaySize(64, 16).refreshBody();
+                this.makeOneWay(bp);
+                bridgeY -= Phaser.Math.Between(60, 90);
+            }
+
             // Spawn safe giant platform at the finish line
             const safeBase = this.platforms.create(200, this.targetY, 'platform').setScale(7, 2).refreshBody();
             this.makeOneWay(safeBase);
