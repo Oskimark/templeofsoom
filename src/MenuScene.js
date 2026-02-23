@@ -17,34 +17,14 @@ export default class MenuScene extends Phaser.Scene {
         // Slightly darken image so text reads well
         portada.setTint(0xdddddd);
 
-        // Text removed as it is part of the image
         const highScore = localStorage.getItem('templeHighScore') || 0;
-        this.add.text(width / 2, height - 60, `${highScore}`, {
-            fontSize: '48px',
+        this.add.text(width / 2, height - 10, `HIGH SCORE: ${highScore}`, {
+            fontSize: '32px',
             fill: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 6,
+            strokeThickness: 5,
             fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        const playText = this.add.text(width / 2, height - 120, 'Click to PLAY', {
-            fontSize: '28px',
-            fill: '#00ff00',
-            stroke: '#000000',
-            strokeThickness: 5
-        }).setOrigin(0.5);
-
-        playText.setInteractive();
-
-        // Flashing text
-        this.tweens.add({
-            targets: playText,
-            alpha: 0,
-            duration: 500,
-            ease: 'Power2',
-            yoyo: true,
-            repeat: -1
-        });
+        }).setOrigin(0.5, 1);
 
         this.input.on('pointerdown', () => {
             this.scene.start('MainScene', { level: 1, score: 0 });

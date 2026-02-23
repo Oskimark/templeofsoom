@@ -45,19 +45,37 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     createMobileControls(scene) {
         const uiDepth = 1000;
 
-        // Left Button
-        this.btnLeft = scene.add.image(50, 520, 'btn_base')
+        // Joystick Base
+        this.joyBase = scene.add.circle(90, 520, 60, 0xffffff, 0.2)
             .setScrollFactor(0).setDepth(uiDepth).setInteractive();
-        this.btnLeft.on('pointerdown', () => this.virtualLeft = true);
-        this.btnLeft.on('pointerup', () => this.virtualLeft = false);
-        this.btnLeft.on('pointerout', () => this.virtualLeft = false);
 
-        // Right Button
-        this.btnRight = scene.add.image(130, 520, 'btn_base')
-            .setScrollFactor(0).setDepth(uiDepth).setInteractive();
-        this.btnRight.on('pointerdown', () => this.virtualRight = true);
-        this.btnRight.on('pointerup', () => this.virtualRight = false);
-        this.btnRight.on('pointerout', () => this.virtualRight = false);
+        // Joystick Thumb
+        this.joyThumb = scene.add.circle(90, 520, 30, 0xffffff, 0.5)
+            .setScrollFactor(0).setDepth(uiDepth);
+
+        let activeJoystickPointer = null;
+
+        this.joyBase.on('pointerdown', (pointer) => {
+            activeJoystickPointer = pointer;
+            this.updateJoystick(pointer);
+        });
+
+        scene.input.on('pointermove', (pointer) => {
+            if (pointer === activeJoystickPointer && pointer.isDown) {
+                this.updateJoystick(pointer);
+            }
+        });
+
+        const resetJoystick = (pointer) => {
+            if (pointer === activeJoystickPointer || !activeJoystickPointer) {
+                activeJoystickPointer = null;
+                this.joyThumb.setPosition(90, 520);
+                this.virtualLeft = false;
+                this.virtualRight = false;
+            }
+        };
+
+        scene.input.on('pointerup', resetJoystick);
 
         // Jump Button
         this.btnJump = scene.add.image(350, 520, 'btn_base')
@@ -75,6 +93,28 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.virtualJump = false;
             this.virtualJumpJustReleased = true;
         });
+    }
+
+    updateJoystick(pointer) {
+        const baseX = 90;
+        const baseY = 520;
+        const maxRadius = 60;
+
+        let dx = pointer.x - baseX;
+        let dy = pointer.y - baseY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > maxRadius) {
+            const angle = Math.atan2(dy, dx);
+            dx = Math.cos(angle) * maxRadius;
+            dy = Math.sin(angle) * maxRadius;
+        }
+
+        this.joyThumb.setPosition(baseX + dx, baseY + dy);
+
+        // Map movement horizontally: deadzone of 15px
+        this.virtualLeft = dx < -15;
+        this.virtualRight = dx > 15;
     }
 
     update(time, delta) {

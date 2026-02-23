@@ -81,8 +81,15 @@ export default class LevelManager {
         // Decide difficulty based on height (lower Y = higher altitude)
         const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));
 
-        // Platform generation (every ~100px vertically)
-        for (let y = this.lastChunkY - 80; y >= chunkTopY; y -= Phaser.Math.Between(80, 110)) {
+        let minGap = 80;
+        let maxGap = 110;
+        if (this.scene.level === 1) {
+            minGap = 60;
+            maxGap = 80;
+        }
+
+        // Platform generation
+        for (let y = this.lastChunkY - minGap; y >= chunkTopY; y -= Phaser.Math.Between(minGap, maxGap)) {
             // How many platforms in this row? (1 or 2)
             const numPlatforms = Phaser.Math.Between(1, 2);
             for (let i = 0; i < numPlatforms; i++) {
@@ -99,18 +106,22 @@ export default class LevelManager {
                 this.makeOneWay(plat);
 
                 // Add spikes sometimes
-                if (!isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.02)) {
+                let hasSpike = false;
+                if (!isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.02 + difficulty * 0.01)) {
                     this.spikes.create(x, y - 16, 'spike');
+                    hasSpike = true;
                 }
 
-                // Add coins sometimes
-                if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
-                    this.coins.create(x, y - 30, 'coin');
-                }
+                if (!hasSpike) {
+                    // Add coins sometimes
+                    if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
+                        this.coins.create(x, y - 30, 'coin');
+                    }
 
-                // Add jetpacks rarely (5% chance per platform)
-                if (Phaser.Math.FloatBetween(0, 1) < 0.05) {
-                    this.jetpacks.create(x, y - 30, 'jetpack');
+                    // Add jetpacks rarely (5% chance per platform)
+                    if (Phaser.Math.FloatBetween(0, 1) < 0.05) {
+                        this.jetpacks.create(x, y - 30, 'jetpack');
+                    }
                 }
             }
 

@@ -39,24 +39,6 @@ export default class GameOverScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
-        const retryText = this.add.text(width / 2, height - 80, 'Click to Retry', {
-            fontSize: '28px',
-            fill: '#00ff00',
-            stroke: '#000000',
-            strokeThickness: 5
-        }).setOrigin(0.5);
-
-        retryText.setInteractive();
-
-        this.tweens.add({
-            targets: retryText,
-            alpha: 0,
-            duration: 500,
-            ease: 'Power2',
-            yoyo: true,
-            repeat: -1
-        });
-
         this.input.on('pointerdown', () => {
             this.scene.start('MainScene');
         });

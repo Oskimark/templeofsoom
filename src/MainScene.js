@@ -31,7 +31,7 @@ export default class MainScene extends Phaser.Scene {
 
         // Lava
         this.lavaHeight = 800; // Start lava far down
-        this.lavaSpeed = 20 + (this.level * 5); // Faster base lava on higher levels
+        this.lavaSpeed = 30 + (this.level * 5); // Constant base lava, slightly faster each level
 
         this.levelManager = new LevelManager(this);
 
@@ -70,6 +70,9 @@ export default class MainScene extends Phaser.Scene {
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0, 0.1, 0, 100);
 
+        // Allow up to 3 active pointers for multitouch
+        this.input.addPointer(2);
+
         // Allow infinite upwards and downwards movement by disabling top/bottom world bounds
         this.physics.world.setBoundsCollision(true, true, false, false);
 
@@ -104,14 +107,6 @@ export default class MainScene extends Phaser.Scene {
 
         // Lava logic
         this.lavaHeight -= (this.lavaSpeed * (delta / 1000));
-
-        // Increase lava speed gradually
-        this.lavaSpeed = 20 + (this.maxHeight * 0.01);
-
-        // Safety mechanic to prevent lava from catching player immediately at start
-        if (this.lavaHeight > this.player.y + 300) {
-            this.lavaHeight = this.player.y + 300;
-        }
 
         this.lava.y = this.lavaHeight;
         this.lava.body.y = this.lavaHeight;
@@ -149,6 +144,12 @@ export default class MainScene extends Phaser.Scene {
         coin.destroy();
         this.score += 500;
         this.updateScore();
+
+        // Acorta el trayecto en un 5% por cada moneda
+        const startY = 500;
+        const totalDistance = startY - this.levelTargetY;
+        this.levelTargetY += (totalDistance * 0.05);
+        this.levelManager.targetY = this.levelTargetY;
     }
 
     collectJetpack(player, jetpack) {
