@@ -84,12 +84,10 @@ export default class LevelManager {
     }
 
     update(cameraY) {
-        // If camera has moved up enough, generate new chunk above
         if (this.lastChunkY > cameraY - 800) {
             this.generateNextChunk();
         }
 
-        // Object Recycling
         this.cleanup(this.platforms, cameraY);
         this.cleanup(this.breakablePlatforms, cameraY);
         this.cleanup(this.spikes, cameraY);
@@ -99,7 +97,6 @@ export default class LevelManager {
         this.cleanup(this.darts, cameraY);
         this.cleanup(this.shields, cameraY);
 
-        // Enemy / UFO logic (move horizontally)
         this.enemies.children.iterate((enemy) => {
             if (enemy && enemy.active) {
                 if (!enemy.initialX) enemy.initialX = enemy.x;
@@ -107,7 +104,6 @@ export default class LevelManager {
             }
         });
 
-        // Moving platforms logic (Level 3)
         this.movingPlatforms.children.iterate((plat) => {
             if (plat && plat.active) {
                 if (!plat.initialX) plat.initialX = plat.x;
@@ -118,15 +114,11 @@ export default class LevelManager {
 
     generateNextChunk() {
         if (this.levelFinished) return;
-
         const chunkTopY = this.lastChunkY - this.chunkHeight;
 
-        // Check level end
         if (chunkTopY <= this.targetY) {
             this.levelFinished = true;
-
             if (!this.isShipMode) {
-                // Add bridging platforms
                 let platTexture = 'platform';
                 if (this.scene.level === 2) platTexture = 'plataforma2';
 
@@ -138,13 +130,9 @@ export default class LevelManager {
                     this.makeOneWay(bp);
                     bridgeY -= Phaser.Math.Between(60, 90);
                 }
-
-                // Safe giant platform at the finish
                 const safeBase = this.platforms.create(300, this.targetY, 'platform').setScale(10, 2).refreshBody();
                 this.makeOneWay(safeBase);
             }
-
-            // Spawn portal
             this.exits.create(300, this.targetY - 80, 'portal');
             this.lastChunkY = this.targetY;
             return;
@@ -155,15 +143,11 @@ export default class LevelManager {
         } else {
             this.generatePlatformChunk(chunkTopY);
         }
-
         this.lastChunkY = chunkTopY;
     }
 
     generateShipChunk(chunkTopY) {
-        // Level 4: spawn coins, shields, hyperdrive, and UFOs in open space
         const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));
-
-        // Coins scattered
         const numCoins = Phaser.Math.Between(2, 4);
         for (let i = 0; i < numCoins; i++) {
             const cx = Phaser.Math.Between(40, this.gameWidth - 40);
@@ -171,21 +155,18 @@ export default class LevelManager {
             this.coins.create(cx, cy, 'coin');
         }
 
-        // Shield item (8% chance per chunk)
         if (Phaser.Math.FloatBetween(0, 1) < 0.08) {
             const sx = Phaser.Math.Between(60, this.gameWidth - 60);
             const sy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
             this.shields.create(sx, sy, 'shield');
         }
 
-        // Hyperdrive item (7% chance, uses jetpack group)
         if (Phaser.Math.FloatBetween(0, 1) < 0.07) {
             const hx = Phaser.Math.Between(60, this.gameWidth - 60);
             const hy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
             this.jetpacks.create(hx, hy, 'hyperdrive');
         }
 
-        // UFOs (enemies with oscillating movement, 15% + difficulty)
         if (Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05)) {
             const ux = Phaser.Math.Between(50, this.gameWidth - 50);
             const uy = Phaser.Math.Between(chunkTopY + 30, this.lastChunkY - 30);
@@ -196,9 +177,9 @@ export default class LevelManager {
 
     generatePlatformChunk(chunkTopY) {
         const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));
-
         let minGap = 80;
         let maxGap = 110;
+
         if (this.scene.level === 1) {
             minGap = 60;
             maxGap = 80;
@@ -213,7 +194,6 @@ export default class LevelManager {
             for (let i = 0; i < numPlatforms; i++) {
                 let x;
                 if (this.scene.level === 2) {
-                    // Guarantee reachability by constraining horizontal distance
                     const maxJumpDist = 230;
                     const minX = Math.max(40, this.lastPlatformX - maxJumpDist);
                     const maxX = Math.min(this.gameWidth - 40, this.lastPlatformX + maxJumpDist);
@@ -224,11 +204,9 @@ export default class LevelManager {
                 rowX = x;
 
                 const isBreakable = this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05);
-
                 let platTexture = 'platform';
                 if (this.scene.level === 2) platTexture = 'plataforma2';
-                if (this.scene.level === 3) platTexture = 'platform';
-
+                
                 let plat;
                 if (this.scene.level === 3 && Phaser.Math.FloatBetween(0, 1) < 0.35) {
                     plat = this.movingPlatforms.create(x, y, platTexture);
@@ -255,12 +233,10 @@ export default class LevelManager {
                     if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
                         this.coins.create(x, y - 30, 'coin');
                     }
-
                     const jetpackChance = this.scene.level === 3 ? 0.08 : 0.05;
                     if (Phaser.Math.FloatBetween(0, 1) < jetpackChance) {
                         this.jetpacks.create(x, y - 30, 'jetpack');
                     }
-
                     if (this.scene.level >= 3 && Phaser.Math.FloatBetween(0, 1) < 0.06) {
                         this.shields.create(x, y - 30, 'shield');
                     }
@@ -275,7 +251,6 @@ export default class LevelManager {
             this.lastPlatformX = rowX;
         }
 
-        // Dart traps (not Level 1 or 3)
         if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1) * 0.1)) {
             const isLeft = Math.random() < 0.5;
             const y = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
@@ -283,7 +258,7 @@ export default class LevelManager {
                 delay: 2000,
                 callback: () => {
                     const dart = this.darts.create(isLeft ? 10 : this.gameWidth - 10, y, 'dart');
-                    dart.setVelocityX(isLeft ? 200 : -200);
+                    if (dart) dart.setVelocityX(isLeft ? 200 : -200);
                 },
                 loop: true
             });
