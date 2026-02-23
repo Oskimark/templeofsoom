@@ -30,7 +30,7 @@ export default class MainScene extends Phaser.Scene {
             // We'll update the bg color dynamically in update() based on player progress
         } else if (this.level === 3) {
             bgmKey = 'bg_music_1';
-            lavaTexture = 'lava_2';
+            lavaTexture = 'lava'; // Orange lava in all levels
             this.cameras.main.setBackgroundColor('#000000');
             // Twinkling stars
             this.stars = [];
@@ -62,7 +62,7 @@ export default class MainScene extends Phaser.Scene {
         this.levelManager = new LevelManager(this);
 
         // Spawn Player
-        this.player = new Player(this, 200, 500);
+        this.player = new Player(this, 300, 500);
 
         // Level 3 space physics: lower gravity, higher jump, longer jetpack
         if (this.level === 3) {
@@ -96,7 +96,7 @@ export default class MainScene extends Phaser.Scene {
         this.progressText = this.add.text(width / 2, 25, '0%', { fontSize: '12px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(100);
 
         // Lava Graphic
-        this.lava = this.add.image(200, this.lavaHeight, lavaTexture).setOrigin(0.5, 0).setDepth(50);
+        this.lava = this.add.image(300, this.lavaHeight, lavaTexture).setOrigin(0.5, 0).setDepth(50);
         this.physics.add.existing(this.lava);
         this.lava.body.setAllowGravity(false);
         this.lava.body.setImmovable(true);
@@ -116,7 +116,7 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
 
         // Deadly Collisions
-        this.physics.add.overlap(this.player, this.lava, this.die, null, this);
+        this.physics.add.overlap(this.player, this.lava, this.dieByLava, null, this);
         this.physics.add.overlap(this.player, this.levelManager.spikes, this.die, null, this);
         this.physics.add.overlap(this.player, this.levelManager.darts, this.die, null, this);
         this.physics.add.overlap(this.player, this.levelManager.enemies, this.die, null, this);
@@ -252,6 +252,23 @@ export default class MainScene extends Phaser.Scene {
             } else {
                 this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
             }
+        }, [], this);
+    }
+
+    dieByLava() {
+        // Lava ALWAYS kills, no shield can save you
+        if (!this.player.active) return;
+        this.player.removeShield();
+        this.player.setActive(false).setVisible(false);
+        this.physics.pause();
+
+        this.bgMusic.stop();
+        this.explosionSound.play();
+        this.cameras.main.shake(500, 0.05);
+
+        const totalScore = this.maxHeight + this.score;
+        this.time.delayedCall(1000, () => {
+            this.scene.start('GameOverScene', { score: totalScore, level: this.level });
         }, [], this);
     }
 

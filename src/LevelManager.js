@@ -14,15 +14,15 @@ export default class LevelManager {
 
         this.chunkHeight = 400;
         this.lastChunkY = 300; // Start at y=300 to provide a safe zone for the spawn
-        this.gameWidth = 400;
+        this.gameWidth = 600;
         this.targetY = scene.levelTargetY; // Imported from scene
         this.levelFinished = false;
 
         // Create starting floor (Safe zone)
-        this.platforms.create(200, 580, 'platform').setScale(7, 2).refreshBody();
+        this.platforms.create(300, 580, 'platform').setScale(10, 2).refreshBody();
         // Safe starting platforms
-        this.makeOneWay(this.platforms.create(100, 480, 'platform'));
-        this.makeOneWay(this.platforms.create(300, 380, 'platform'));
+        this.makeOneWay(this.platforms.create(150, 480, 'platform'));
+        this.makeOneWay(this.platforms.create(450, 380, 'platform'));
 
         // Initial chunks
         this.generateNextChunk();
@@ -95,10 +95,10 @@ export default class LevelManager {
             }
 
             // Spawn safe giant platform at the finish line
-            const safeBase = this.platforms.create(200, this.targetY, 'platform').setScale(7, 2).refreshBody();
+            const safeBase = this.platforms.create(300, this.targetY, 'platform').setScale(10, 2).refreshBody();
             this.makeOneWay(safeBase);
             // Spawn portal
-            this.exits.create(200, this.targetY - 80, 'portal');
+            this.exits.create(300, this.targetY - 80, 'portal');
             this.lastChunkY = this.targetY;
             return;
         }

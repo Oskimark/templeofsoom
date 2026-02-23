@@ -6,11 +6,15 @@ import StoryScene from './StoryScene.js';
 
 const config = {
     type: Phaser.AUTO,
-    width: 400,
+    width: 600,
     height: 600,
     parent: 'game-container',
     backgroundColor: '#000000',
     pixelArt: true,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     physics: {
         default: 'arcade',
         arcade: {

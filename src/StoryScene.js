@@ -59,7 +59,10 @@ export default class StoryScene extends Phaser.Scene {
             this.scene.start('MainScene', { level: this.nextLevel, score: this.score });
         };
 
-        this.input.on('pointerdown', startNext);
-        this.input.keyboard.on('keydown-SPACE', startNext);
+        // Delay input registration to prevent the menu click from skipping this scene
+        this.time.delayedCall(500, () => {
+            this.input.on('pointerdown', startNext);
+            this.input.keyboard.on('keydown-SPACE', startNext);
+        });
     }
 }
