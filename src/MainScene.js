@@ -16,14 +16,27 @@ export default class MainScene extends Phaser.Scene {
         this.levelTargetY = -4000 - (this.level * 2000); // Level 1 is -6000
 
         // Setting up level specific palettes
-        let bgmKey = 'bg_music_1';
+        let bgmKey = 'bg_music_1'; // Default
         let lavaTexture = 'lava';
 
-        if (this.level % 2 === 0) { // Even levels
-            bgmKey = 'bg_music_2';
-            this.cameras.main.setBackgroundColor('#1a0033'); // Dark purple bg
-            lavaTexture = 'lava_2';
-        } else { // Odd levels
+        if (this.level === 1) {
+            bgmKey = 'bg_music_2'; // Tribal Apex
+            this.cameras.main.setBackgroundColor('#3e2723'); // Dark brown/earthy
+            lavaTexture = 'lava';
+        } else if (this.level % 2 === 0) { // Even levels (like Level 2)
+            bgmKey = 'bg_music_1';
+            lavaTexture = 'lava_2'; // Ensure this is actually loaded or default to lava
+
+            // Degraded Sky Background Simple
+            this.cameras.main.setBackgroundColor('#ff4500'); // Base atmospheric red
+            // Fake gradient via graphics
+            const graphics = this.add.graphics();
+            graphics.fillGradientStyle(0x000033, 0x000033, 0xff4500, 0xff4500, 1);
+            graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
+            graphics.setScrollFactor(0);
+            graphics.setDepth(-10);
+
+        } else { // Other Odd levels
             bgmKey = 'bg_music_1';
             this.cameras.main.setBackgroundColor('#000000'); // Black bg
             lavaTexture = 'lava';
@@ -174,7 +187,11 @@ export default class MainScene extends Phaser.Scene {
         this.cameras.main.flash(500, 255, 255, 255);
         this.time.delayedCall(1000, () => {
             const totalScore = this.maxHeight + this.score;
-            this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
+            if (this.level === 1) {
+                this.scene.start('StoryScene', { nextLevel: 2, score: totalScore });
+            } else {
+                this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
+            }
         }, [], this);
     }
 

@@ -97,11 +97,16 @@ export default class LevelManager {
 
                 const isBreakable = Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05); // Increasing chance of breakable
 
+                let platTexture = 'platform';
+                if (this.scene.level === 2 || (this.scene.level % 2 === 0)) platTexture = 'plataforma2';
+
                 let plat;
                 if (isBreakable) {
                     plat = this.breakablePlatforms.create(x, y, 'platform_breakable');
+                    plat.setDisplaySize(64, 16).refreshBody();
                 } else {
-                    plat = this.platforms.create(x, y, 'platform');
+                    plat = this.platforms.create(x, y, platTexture);
+                    plat.setDisplaySize(64, 16).refreshBody();
                 }
                 this.makeOneWay(plat);
 
@@ -125,16 +130,16 @@ export default class LevelManager {
                 }
             }
 
-            // Add enemy occasionally
-            if (Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
+            // Add enemy occasionally (Not in Level 1)
+            if (this.scene.level !== 1 && Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
                 const ex = Phaser.Math.Between(50, this.gameWidth - 50);
                 const enemy = this.enemies.create(ex, y - 40, 'enemy');
                 enemy.body.setSize(16, 16);
             }
         }
 
-        // Add Dart traps on walls (every chunk occasionally)
-        if (Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
+        // Add Dart traps on walls (every chunk occasionally, not in Level 1)
+        if (this.scene.level !== 1 && Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
             const isLeft = Math.random() < 0.5;
             const y = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
             const dartTimer = this.scene.time.addEvent({

@@ -11,6 +11,8 @@ export default class Preloader extends Phaser.Scene {
         // Load Images
         this.load.image('portada', 'images/portada.png');
         this.load.image('gameover', 'images/game over.png');
+        this.load.image('lev1', 'images/lev1.png');
+        this.load.image('plataforma2', 'images/plataforma2.png');
         // Create basic textures for the game programmatically
         // Player texture (a small square/rectangle)
         const playerGraphics = this.make.graphics();
