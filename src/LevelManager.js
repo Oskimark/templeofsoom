@@ -24,7 +24,8 @@ export default class LevelManager {
             // Platformer: Create starting floor
             this.platforms.create(300, 580, 'platform').setScale(10, 2).refreshBody();
             this.makeOneWay(this.platforms.create(150, 480, 'platform'));
-            this.makeOneWay(this.platforms.create(450, 380, 'platform'));
+            this.lastPlatformX = 450;
+            this.makeOneWay(this.platforms.create(this.lastPlatformX, 380, 'platform'));
         }
 
         // Initial chunks
@@ -189,12 +190,13 @@ export default class LevelManager {
         }
 
         for (let y = this.lastChunkY - minGap; y >= chunkTopY; y -= Phaser.Math.Between(minGap, maxGap)) {
-            const numPlatforms = Phaser.Math.Between(1, 2);
+            const numPlatforms = (this.scene.level === 2) ? 1 : Phaser.Math.Between(1, 2);
             let rowX = this.lastPlatformX;
             for (let i = 0; i < numPlatforms; i++) {
                 let x;
                 if (this.scene.level === 2) {
-                    const maxJumpDist = 230;
+                    // Guarantee reachability by constraining horizontal distance
+                    const maxJumpDist = 160;
                     const minX = Math.max(40, this.lastPlatformX - maxJumpDist);
                     const maxX = Math.min(this.gameWidth - 40, this.lastPlatformX + maxJumpDist);
                     x = Phaser.Math.Between(minX, maxX);
@@ -206,7 +208,7 @@ export default class LevelManager {
                 const isBreakable = this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05);
                 let platTexture = 'platform';
                 if (this.scene.level === 2) platTexture = 'plataforma2';
-                
+
                 let plat;
                 if (this.scene.level === 3 && Phaser.Math.FloatBetween(0, 1) < 0.35) {
                     plat = this.movingPlatforms.create(x, y, platTexture);
