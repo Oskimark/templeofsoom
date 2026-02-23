@@ -12,6 +12,7 @@ export default class Preloader extends Phaser.Scene {
         this.load.image('portada', 'images/portada.png');
         this.load.image('gameover', 'images/game over.png');
         this.load.image('lev1', 'images/lev1.png');
+        this.load.image('lev2', 'images/lev2.png');
         this.load.image('plataforma2', 'images/plataforma2.png');
         // Create basic textures for the game programmatically
         // Player texture (a small square/rectangle)
@@ -90,6 +91,14 @@ export default class Preloader extends Phaser.Scene {
         jetpackGraphics.fillRect(6, 2, 6, 2);  // Top bar
         jetpackGraphics.fillStyle(0xffa500); // Orange flame
         jetpackGraphics.generateTexture('jetpack', 16, 28);
+
+        // Shield texture
+        const shieldGraphics = this.make.graphics();
+        shieldGraphics.lineStyle(3, 0x00ff88, 1);
+        shieldGraphics.strokeCircle(12, 12, 12);
+        shieldGraphics.fillStyle(0x00ff88, 0.3);
+        shieldGraphics.fillCircle(12, 12, 12);
+        shieldGraphics.generateTexture('shield', 24, 24);
 
         // Mobile Controls Textures
         const btnGraphics = this.make.graphics();

@@ -23,22 +23,35 @@ export default class MainScene extends Phaser.Scene {
             bgmKey = 'bg_music_2'; // Tribal Apex
             this.cameras.main.setBackgroundColor('#3e2723'); // Dark brown/earthy
             lavaTexture = 'lava';
-        } else if (this.level % 2 === 0) { // Even levels (like Level 2)
+        } else if (this.level === 2) {
             bgmKey = 'bg_music_1';
-            lavaTexture = 'lava_2'; // Ensure this is actually loaded or default to lava
-
-            // Degraded Sky Background Simple
-            this.cameras.main.setBackgroundColor('#ff4500'); // Base atmospheric red
-            // Fake gradient via graphics
-            const graphics = this.add.graphics();
-            graphics.fillGradientStyle(0x000033, 0x000033, 0xff4500, 0xff4500, 1);
-            graphics.fillRect(0, 0, this.cameras.main.width, this.cameras.main.height);
-            graphics.setScrollFactor(0);
-            graphics.setDepth(-10);
-
-        } else { // Other Odd levels
+            lavaTexture = 'lava'; // Orange lava
+            this.cameras.main.setBackgroundColor('#ff4500');
+            // We'll update the bg color dynamically in update() based on player progress
+        } else if (this.level === 3) {
             bgmKey = 'bg_music_1';
-            this.cameras.main.setBackgroundColor('#000000'); // Black bg
+            lavaTexture = 'lava_2';
+            this.cameras.main.setBackgroundColor('#000000');
+            // Twinkling stars
+            this.stars = [];
+            for (let i = 0; i < 60; i++) {
+                const sx = Phaser.Math.Between(0, this.cameras.main.width);
+                const sy = Phaser.Math.Between(0, this.cameras.main.height);
+                const star = this.add.circle(sx, sy, Phaser.Math.Between(1, 3), 0xffffff, Phaser.Math.FloatBetween(0.3, 1));
+                star.setScrollFactor(0).setDepth(-5);
+                this.tweens.add({
+                    targets: star,
+                    alpha: Phaser.Math.FloatBetween(0.1, 0.4),
+                    duration: Phaser.Math.Between(800, 2000),
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+                this.stars.push(star);
+            }
+        } else {
+            bgmKey = 'bg_music_1';
+            this.cameras.main.setBackgroundColor('#000000');
             lavaTexture = 'lava';
         }
 
@@ -50,6 +63,14 @@ export default class MainScene extends Phaser.Scene {
 
         // Spawn Player
         this.player = new Player(this, 200, 500);
+
+        // Level 3 space physics: lower gravity, higher jump, longer jetpack
+        if (this.level === 3) {
+            this.player.setGravityY(600); // Half gravity
+            this.player.jumpForce = -750; // Longer jumps
+            this.player.jetpackThrust = -1500;
+            this.player.maxJetpackFuel = 200; // Double fuel capacity
+        }
 
         // Audio
         this.bgMusic = this.sound.add(bgmKey, { volume: 0.5, loop: true });
@@ -92,6 +113,7 @@ export default class MainScene extends Phaser.Scene {
         // Collisions
         this.physics.add.collider(this.player, this.levelManager.platforms);
         this.physics.add.collider(this.player, this.levelManager.breakablePlatforms, this.hitBreakable, null, this);
+        this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
 
         // Deadly Collisions
         this.physics.add.overlap(this.player, this.lava, this.die, null, this);
@@ -102,6 +124,7 @@ export default class MainScene extends Phaser.Scene {
         // Items & Exits
         this.physics.add.overlap(this.player, this.levelManager.coins, this.collectCoin, null, this);
         this.physics.add.overlap(this.player, this.levelManager.jetpacks, this.collectJetpack, null, this);
+        this.physics.add.overlap(this.player, this.levelManager.shields, this.collectShield, null, this);
         this.physics.add.overlap(this.player, this.levelManager.exits, this.finishLevel, null, this);
     }
 
@@ -143,6 +166,15 @@ export default class MainScene extends Phaser.Scene {
 
         this.progressBar.width = 180 * progress;
         this.progressText.setText(Math.floor(progress * 100) + '%');
+
+        // Level 2: dynamically shift background color from red to dark blue based on progress
+        if (this.level === 2) {
+            const r = Math.floor(255 * (1 - progress));
+            const g = Math.floor(20 * progress);
+            const b = Math.floor(51 + (204 * progress));
+            const hex = (r << 16) | (g << 8) | b;
+            this.cameras.main.setBackgroundColor(hex);
+        }
     }
 
     hitBreakable(player, platform) {
@@ -174,6 +206,12 @@ export default class MainScene extends Phaser.Scene {
         this.cameras.main.flash(200, 0, 191, 255); // Blue flash
     }
 
+    collectShield(player, shield) {
+        shield.destroy();
+        player.activateShield();
+        this.cameras.main.flash(200, 0, 255, 136); // Green flash
+    }
+
     updateScore(add = 0) {
         // Calculate total score = maxHeight + collected items
         const total = this.maxHeight + this.score;
@@ -188,7 +226,16 @@ export default class MainScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
             const totalScore = this.maxHeight + this.score;
             if (this.level === 1) {
-                this.scene.start('StoryScene', { nextLevel: 2, score: totalScore });
+                this.scene.start('StoryScene', {
+                    storyKey: 'lev1', nextLevel: 2, score: totalScore,
+                    title: 'ESCAPASTE DEL VOLCÁN',
+                    desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...'
+                });
+            } else if (this.level === 2) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'lev2', nextLevel: 3, score: totalScore,
+                    noText: true
+                });
             } else {
                 this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
             }
@@ -196,6 +243,21 @@ export default class MainScene extends Phaser.Scene {
     }
 
     die() {
+        // Shield absorbs one hit and gives brief invulnerability
+        if (this.player.hasShield) {
+            this.player.removeShield();
+            this.cameras.main.shake(200, 0.02);
+            // Brief invulnerability after shield break
+            this.player.setAlpha(0.5);
+            this.time.delayedCall(1500, () => {
+                if (this.player.active) this.player.setAlpha(1);
+            });
+            return;
+        }
+
+        // If player is invulnerable (just lost shield), ignore
+        if (this.player.alpha < 1) return;
+
         this.player.setActive(false).setVisible(false);
         this.physics.pause();
 

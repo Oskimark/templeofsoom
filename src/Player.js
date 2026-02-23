@@ -22,6 +22,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.maxJetpackFuel = 100;
         this.jetpackThrust = -2500; // Overcome 1200 gravity with upward force
 
+        // Shield
+        this.hasShield = false;
+        this.shieldGraphic = null;
+
         // Keys
         this.cursors = scene.input.keyboard.createCursorKeys();
         this.keys = scene.input.keyboard.addKeys({
@@ -184,9 +188,30 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         } else {
             this.setAccelerationY(0); // Restore normal gravity acceleration
         }
+
+        // Update shield visual position
+        if (this.shieldGraphic && this.hasShield) {
+            this.shieldGraphic.setPosition(this.x, this.y);
+        }
     }
 
     addJetpackFuel(amount) {
         this.jetpackFuel = Math.min(this.jetpackFuel + amount, this.maxJetpackFuel);
+    }
+
+    activateShield() {
+        this.hasShield = true;
+        if (this.shieldGraphic) this.shieldGraphic.destroy();
+        this.shieldGraphic = this.scene.add.circle(this.x, this.y, 22, 0x00ff88, 0.25);
+        this.shieldGraphic.setStrokeStyle(2, 0x00ff88, 0.8);
+        this.shieldGraphic.setDepth(99);
+    }
+
+    removeShield() {
+        this.hasShield = false;
+        if (this.shieldGraphic) {
+            this.shieldGraphic.destroy();
+            this.shieldGraphic = null;
+        }
     }
 }

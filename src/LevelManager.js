@@ -9,6 +9,8 @@ export default class LevelManager {
         this.enemies = scene.physics.add.group({ allowGravity: false });
         this.darts = scene.physics.add.group({ allowGravity: false });
         this.exits = scene.physics.add.staticGroup(); // Win conditions
+        this.movingPlatforms = scene.physics.add.group({ allowGravity: false }); // Level 3 moving platforms
+        this.shields = scene.physics.add.group({ allowGravity: false }); // Shield items
 
         this.chunkHeight = 400;
         this.lastChunkY = 300; // Start at y=300 to provide a safe zone for the spawn
@@ -49,6 +51,7 @@ export default class LevelManager {
         this.cleanup(this.jetpacks, cameraY);
         this.cleanup(this.enemies, cameraY);
         this.cleanup(this.darts, cameraY);
+        this.cleanup(this.shields, cameraY);
 
         // Breakable logic (just collision detection handling in MainScene, this class just holds the physics groups)
 
@@ -57,6 +60,14 @@ export default class LevelManager {
             if (enemy && enemy.active) {
                 if (!enemy.initialX) enemy.initialX = enemy.x;
                 enemy.x = enemy.initialX + Math.sin(this.scene.time.now / 300 + enemy.initialX) * 50;
+            }
+        });
+
+        // Moving platforms logic (Level 3)
+        this.movingPlatforms.children.iterate((plat) => {
+            if (plat && plat.active) {
+                if (!plat.initialX) plat.initialX = plat.x;
+                plat.x = plat.initialX + Math.sin(this.scene.time.now / 1000 + plat.initialX) * 80;
             }
         });
     }
@@ -95,13 +106,22 @@ export default class LevelManager {
             for (let i = 0; i < numPlatforms; i++) {
                 const x = Phaser.Math.Between(40, this.gameWidth - 40);
 
-                const isBreakable = Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05); // Increasing chance of breakable
+                const isBreakable = this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05);
 
+                // Choose texture per level
                 let platTexture = 'platform';
-                if (this.scene.level === 2 || (this.scene.level % 2 === 0)) platTexture = 'plataforma2';
+                if (this.scene.level === 2) platTexture = 'plataforma2';
+                if (this.scene.level === 3) platTexture = 'platform'; // Space uses default
 
                 let plat;
-                if (isBreakable) {
+                if (this.scene.level === 3 && Phaser.Math.FloatBetween(0, 1) < 0.35) {
+                    // Moving platform in Level 3
+                    plat = this.movingPlatforms.create(x, y, platTexture);
+                    plat.setDisplaySize(64, 16);
+                    plat.body.setAllowGravity(false);
+                    plat.body.setImmovable(true);
+                    plat.body.setSize(64, 16);
+                } else if (isBreakable) {
                     plat = this.breakablePlatforms.create(x, y, 'platform_breakable');
                     plat.setDisplaySize(64, 16).refreshBody();
                 } else {
@@ -110,9 +130,9 @@ export default class LevelManager {
                 }
                 this.makeOneWay(plat);
 
-                // Add spikes sometimes
+                // Add spikes sometimes (NOT in Level 1 or Level 3)
                 let hasSpike = false;
-                if (!isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.02 + difficulty * 0.01)) {
+                if (this.scene.level !== 1 && this.scene.level !== 3 && !isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.02 + difficulty * 0.01)) {
                     this.spikes.create(x, y - 16, 'spike');
                     hasSpike = true;
                 }
@@ -123,23 +143,29 @@ export default class LevelManager {
                         this.coins.create(x, y - 30, 'coin');
                     }
 
-                    // Add jetpacks rarely (5% chance per platform)
-                    if (Phaser.Math.FloatBetween(0, 1) < 0.05) {
+                    // Add jetpacks rarely (5% chance, 8% in space)
+                    const jetpackChance = this.scene.level === 3 ? 0.08 : 0.05;
+                    if (Phaser.Math.FloatBetween(0, 1) < jetpackChance) {
                         this.jetpacks.create(x, y - 30, 'jetpack');
+                    }
+
+                    // Add shields in Level 3 (6% chance)
+                    if (this.scene.level >= 3 && Phaser.Math.FloatBetween(0, 1) < 0.06) {
+                        this.shields.create(x, y - 30, 'shield');
                     }
                 }
             }
 
-            // Add enemy occasionally (Not in Level 1)
-            if (this.scene.level !== 1 && Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
+            // Add enemy occasionally (Not in Level 1 or Level 3)
+            if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
                 const ex = Phaser.Math.Between(50, this.gameWidth - 50);
                 const enemy = this.enemies.create(ex, y - 40, 'enemy');
                 enemy.body.setSize(16, 16);
             }
         }
 
-        // Add Dart traps on walls (every chunk occasionally, not in Level 1)
-        if (this.scene.level !== 1 && Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
+        // Add Dart traps on walls (not in Level 1 or Level 3)
+        if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
             const isLeft = Math.random() < 0.5;
             const y = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
             const dartTimer = this.scene.time.addEvent({
