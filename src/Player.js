@@ -1,26 +1,38 @@
 export default class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y) {
-        super(scene, x, y, 'player');
+    constructor(scene, x, y, isShipMode = false) {
+        const texture = isShipMode ? 'ship' : 'player';
+        super(scene, x, y, texture);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.isShipMode = isShipMode;
         this.setCollideWorldBounds(true);
-        // Heavy but agile control
-        this.setGravityY(1200);
-        this.setDragX(1500);
-        this.setMaxVelocity(300, 800);
+
+        if (isShipMode) {
+            // Ship mode: no gravity, free movement
+            this.setGravityY(-1000); // Cancel world gravity
+            this.setDragX(800);
+            this.setDrag(800);
+            this.setMaxVelocity(350, 500);
+            this.moveSpeed = 350;
+        } else {
+            // Platformer mode
+            this.setGravityY(1200);
+            this.setDragX(1500);
+            this.setMaxVelocity(300, 800);
+            this.moveSpeed = 250;
+        }
 
         this.coyoteTime = 0;
         this.jumpsLeft = 2;
         this.maxJumps = 2;
         this.jumpForce = -650;
-        this.moveSpeed = 250;
 
-        // Jetpack properties
+        // Jetpack / Hyperdrive properties
         this.jetpackFuel = 0;
-        this.maxJetpackFuel = 100;
-        this.jetpackThrust = -2500; // Overcome 1200 gravity with upward force
+        this.maxJetpackFuel = isShipMode ? 150 : 100;
+        this.jetpackThrust = -2500;
 
         // Shield
         this.hasShield = false;
@@ -31,12 +43,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.keys = scene.input.keyboard.addKeys({
             a: Phaser.Input.Keyboard.KeyCodes.A,
             d: Phaser.Input.Keyboard.KeyCodes.D,
+            w: Phaser.Input.Keyboard.KeyCodes.W,
+            s: Phaser.Input.Keyboard.KeyCodes.S,
             space: Phaser.Input.Keyboard.KeyCodes.SPACE
         });
 
         // Mobile Controls setup
         this.virtualLeft = false;
         this.virtualRight = false;
+        this.virtualUp = false;
+        this.virtualDown = false;
         this.virtualJump = false;
         this.virtualJumpJustDown = false;
         this.virtualJumpJustReleased = false;
@@ -76,12 +92,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 this.joyThumb.setPosition(90, 520);
                 this.virtualLeft = false;
                 this.virtualRight = false;
+                this.virtualUp = false;
+                this.virtualDown = false;
             }
         };
 
         scene.input.on('pointerup', resetJoystick);
 
-        // Jump Button
+        // Jump/Action Button
         this.btnJump = scene.add.image(350, 520, 'btn_base')
             .setScrollFactor(0).setDepth(uiDepth).setInteractive();
 
@@ -116,12 +134,62 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         this.joyThumb.setPosition(baseX + dx, baseY + dy);
 
-        // Map movement horizontally: deadzone of 15px
+        // Map movement: deadzone of 15px
         this.virtualLeft = dx < -15;
         this.virtualRight = dx > 15;
+        this.virtualUp = dy < -15;
+        this.virtualDown = dy > 15;
     }
 
     update(time, delta) {
+        if (this.isShipMode) {
+            this.updateShipMode(time, delta);
+        } else {
+            this.updatePlatformerMode(time, delta);
+        }
+
+        // Update shield visual position
+        if (this.shieldGraphic && this.hasShield) {
+            this.shieldGraphic.setPosition(this.x, this.y);
+        }
+    }
+
+    updateShipMode(time, delta) {
+        // Free movement in all 4 directions
+        const moveLeft = this.cursors.left.isDown || this.keys.a.isDown || this.virtualLeft;
+        const moveRight = this.cursors.right.isDown || this.keys.d.isDown || this.virtualRight;
+        const moveUp = this.cursors.up.isDown || this.keys.w.isDown || this.virtualUp;
+        const moveDown = this.cursors.down.isDown || this.keys.s.isDown || this.virtualDown;
+
+        // Horizontal
+        if (moveLeft) {
+            this.setAccelerationX(-2000);
+        } else if (moveRight) {
+            this.setAccelerationX(2000);
+        } else {
+            this.setAccelerationX(0);
+        }
+
+        // Vertical - default drift upward slowly
+        if (moveUp) {
+            this.setAccelerationY(-2000);
+        } else if (moveDown) {
+            this.setAccelerationY(1500);
+        } else {
+            // Gentle upward drift (ship is escaping)
+            this.setVelocityY(Math.max(this.body.velocity.y - 2, -80));
+        }
+
+        // Hyperdrive (space key) - boosts upward
+        const hyperdriveActive = (this.cursors.up.isDown && this.keys.space.isDown) || (this.virtualJump && this.virtualUp);
+        if (this.jetpackFuel > 0 && hyperdriveActive) {
+            this.setVelocityY(-500);
+            this.jetpackFuel -= delta * 0.08;
+            if (this.jetpackFuel <= 0) this.jetpackFuel = 0;
+        }
+    }
+
+    updatePlatformerMode(time, delta) {
         const isGrounded = this.body.touching.down || this.body.blocked.down;
 
         // Movement logic
@@ -140,12 +208,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Coyote time logic
         if (isGrounded) {
-            this.coyoteTime = 150; // ms of coyote time
+            this.coyoteTime = 150;
             this.jumpsLeft = this.maxJumps;
         } else {
             this.coyoteTime -= delta;
             if (this.coyoteTime <= 0 && this.jumpsLeft === this.maxJumps) {
-                // If we walk off a ledge and coyote time expires, lose the first jump
                 this.jumpsLeft = this.maxJumps - 1;
             }
         }
@@ -154,44 +221,34 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const jumpJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.space) || this.virtualJumpJustDown;
         const jumpIsDown = this.cursors.up.isDown || this.keys.space.isDown || this.virtualJump;
 
-        // Reset virtual triggers
         this.virtualJumpJustDown = false;
 
-        // Initial normal jumps
         if (jumpJustDown && this.jumpsLeft > 0) {
             this.setVelocityY(this.jumpForce);
             this.jumpsLeft--;
             this.coyoteTime = 0;
         }
 
-        // Variable jump height (only apply if NOT using jetpack)
         const jumpJustReleased = Phaser.Input.Keyboard.JustUp(this.cursors.up) || Phaser.Input.Keyboard.JustUp(this.keys.space) || this.virtualJumpJustReleased;
-        this.virtualJumpJustReleased = false; // Reset vertical trigger
+        this.virtualJumpJustReleased = false;
 
         const usingJetpack = jumpIsDown && this.jetpackFuel > 0 && this.jumpsLeft === 0;
 
         if (jumpJustReleased && this.body.velocity.y < 0 && !usingJetpack) {
-            this.setVelocityY(this.body.velocity.y * 0.5); // Reduce velocity for shorter jumps
+            this.setVelocityY(this.body.velocity.y * 0.5);
         }
 
-        // Jetpack thrust (continuous hold after jumps are exhausted, or anytime if fuel exists)
         if (usingJetpack) {
             this.setAccelerationY(this.jetpackThrust);
-            // Cancel out existing downward velocity quickly to allow immediate ascension
             if (this.body.velocity.y > 0) {
                 this.setVelocityY(this.body.velocity.y * 0.9);
             }
-            this.jetpackFuel -= delta * 0.05; // Deplete fuel
+            this.jetpackFuel -= delta * 0.05;
             if (this.jetpackFuel <= 0) {
                 this.jetpackFuel = 0;
             }
         } else {
-            this.setAccelerationY(0); // Restore normal gravity acceleration
-        }
-
-        // Update shield visual position
-        if (this.shieldGraphic && this.hasShield) {
-            this.shieldGraphic.setPosition(this.x, this.y);
+            this.setAccelerationY(0);
         }
     }
 

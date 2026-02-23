@@ -13,7 +13,8 @@ export default class MainScene extends Phaser.Scene {
 
     create() {
         this.maxHeight = 0;
-        this.levelTargetY = -4000 - (this.level * 2000); // Level 1 is -6000
+        this.levelTargetY = -4000 - (this.level * 2000);
+        this.isShipMode = (this.level >= 4);
 
         // Setting up level specific palettes
         let bgmKey = 'bg_music_1'; // Default
@@ -49,6 +50,27 @@ export default class MainScene extends Phaser.Scene {
                 });
                 this.stars.push(star);
             }
+        } else if (this.level >= 4) {
+            bgmKey = 'bg_music_1';
+            lavaTexture = 'lava_explosion'; // Yellow explosion
+            this.cameras.main.setBackgroundColor('#000000');
+            // Twinkling stars
+            this.stars = [];
+            for (let i = 0; i < 80; i++) {
+                const sx = Phaser.Math.Between(0, this.cameras.main.width);
+                const sy = Phaser.Math.Between(0, this.cameras.main.height);
+                const star = this.add.circle(sx, sy, Phaser.Math.Between(1, 2), 0xffffff, Phaser.Math.FloatBetween(0.2, 0.8));
+                star.setScrollFactor(0).setDepth(-5);
+                this.tweens.add({
+                    targets: star,
+                    alpha: Phaser.Math.FloatBetween(0.05, 0.3),
+                    duration: Phaser.Math.Between(600, 1800),
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+                this.stars.push(star);
+            }
         } else {
             bgmKey = 'bg_music_1';
             this.cameras.main.setBackgroundColor('#000000');
@@ -62,14 +84,18 @@ export default class MainScene extends Phaser.Scene {
         this.levelManager = new LevelManager(this);
 
         // Spawn Player
-        this.player = new Player(this, 300, 500);
+        if (this.isShipMode) {
+            this.player = new Player(this, 300, 500, true); // Ship mode
+        } else {
+            this.player = new Player(this, 300, 500, false);
+        }
 
-        // Level 3 space physics: lower gravity, higher jump, longer jetpack
+        // Level 3 space physics
         if (this.level === 3) {
-            this.player.setGravityY(600); // Half gravity
-            this.player.jumpForce = -750; // Longer jumps
+            this.player.setGravityY(600);
+            this.player.jumpForce = -750;
             this.player.jetpackThrust = -1500;
-            this.player.maxJetpackFuel = 200; // Double fuel capacity
+            this.player.maxJetpackFuel = 200;
         }
 
         // Audio
@@ -84,8 +110,9 @@ export default class MainScene extends Phaser.Scene {
         this.scoreText = this.add.text(16, 16, `Level: ${this.level} - Score: ${this.score}`, { fontSize: '20px', fill: '#fff' }).setScrollFactor(0);
         this.scoreText.setDepth(100);
 
-        // Jetpack UI
-        this.add.text(16, 46, 'Fuel:', { fontSize: '18px', fill: '#00bfff' }).setScrollFactor(0).setDepth(100);
+        // Jetpack/Hyperdrive UI
+        const fuelLabel = this.isShipMode ? 'Hyper:' : 'Fuel:';
+        this.add.text(16, 46, fuelLabel, { fontSize: '18px', fill: '#00bfff' }).setScrollFactor(0).setDepth(100);
         this.fuelBarBg = this.add.rectangle(75, 55, 100, 15, 0x555555).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
         this.fuelBar = this.add.rectangle(75, 55, 0, 15, 0x00bfff).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
@@ -110,10 +137,12 @@ export default class MainScene extends Phaser.Scene {
         // Allow infinite upwards and downwards movement by disabling top/bottom world bounds
         this.physics.world.setBoundsCollision(true, true, false, false);
 
-        // Collisions
-        this.physics.add.collider(this.player, this.levelManager.platforms);
-        this.physics.add.collider(this.player, this.levelManager.breakablePlatforms, this.hitBreakable, null, this);
-        this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
+        // Collisions (skip platform colliders in ship mode)
+        if (!this.isShipMode) {
+            this.physics.add.collider(this.player, this.levelManager.platforms);
+            this.physics.add.collider(this.player, this.levelManager.breakablePlatforms, this.hitBreakable, null, this);
+            this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
+        }
 
         // Deadly Collisions
         this.physics.add.overlap(this.player, this.lava, this.dieByLava, null, this);
@@ -248,6 +277,12 @@ export default class MainScene extends Phaser.Scene {
                 this.scene.start('StoryScene', {
                     storyKey: 'lev2', nextLevel: 3, score: totalScore,
                     noText: true
+                });
+            } else if (this.level === 3) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'lev2', nextLevel: 4, score: totalScore,
+                    title: '¡ABORDASTE LA NAVE!',
+                    desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!'
                 });
             } else {
                 this.scene.start('MainScene', { level: this.level + 1, score: totalScore });

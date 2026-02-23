@@ -8,26 +8,44 @@ export default class LevelManager {
         this.jetpacks = scene.physics.add.group({ allowGravity: false });
         this.enemies = scene.physics.add.group({ allowGravity: false });
         this.darts = scene.physics.add.group({ allowGravity: false });
-        this.exits = scene.physics.add.staticGroup(); // Win conditions
-        this.movingPlatforms = scene.physics.add.group({ allowGravity: false }); // Level 3 moving platforms
-        this.shields = scene.physics.add.group({ allowGravity: false }); // Shield items
+        this.exits = scene.physics.add.staticGroup();
+        this.movingPlatforms = scene.physics.add.group({ allowGravity: false });
+        this.shields = scene.physics.add.group({ allowGravity: false });
 
         this.chunkHeight = 400;
-        this.lastChunkY = 300; // Start at y=300 to provide a safe zone for the spawn
+        this.lastChunkY = 300;
         this.gameWidth = 600;
-        this.targetY = scene.levelTargetY; // Imported from scene
+        this.targetY = scene.levelTargetY;
         this.levelFinished = false;
+        this.isShipMode = (scene.level >= 4);
 
-        // Create starting floor (Safe zone)
-        this.platforms.create(300, 580, 'platform').setScale(10, 2).refreshBody();
-        // Safe starting platforms
-        this.makeOneWay(this.platforms.create(150, 480, 'platform'));
-        this.makeOneWay(this.platforms.create(450, 380, 'platform'));
+        if (!this.isShipMode) {
+            // Platformer: Create starting floor
+            this.platforms.create(300, 580, 'platform').setScale(10, 2).refreshBody();
+            this.makeOneWay(this.platforms.create(150, 480, 'platform'));
+            this.makeOneWay(this.platforms.create(450, 380, 'platform'));
+        }
 
         // Initial chunks
         this.generateNextChunk();
         this.generateNextChunk();
         this.generateNextChunk();
+
+        // Level 4+: periodic spawners for debris and meteorites
+        if (this.isShipMode) {
+            // Debris rising from below every 1.5s
+            scene.time.addEvent({
+                delay: 1500,
+                callback: () => this.spawnDebris(),
+                loop: true
+            });
+            // Meteorites crossing laterally every 2s
+            scene.time.addEvent({
+                delay: 2000,
+                callback: () => this.spawnMeteorite(),
+                loop: true
+            });
+        }
     }
 
     makeOneWay(platform) {
@@ -37,13 +55,40 @@ export default class LevelManager {
         return platform;
     }
 
+    spawnDebris() {
+        const cam = this.scene.cameras.main;
+        const x = Phaser.Math.Between(30, this.gameWidth - 30);
+        const y = cam.scrollY + cam.height + 50; // Below screen
+        const debris = this.darts.create(x, y, 'debris');
+        debris.setVelocityY(Phaser.Math.Between(-350, -200)); // Rises upward
+        debris.body.setAllowGravity(false);
+        // Rotate the debris
+        this.scene.tweens.add({
+            targets: debris,
+            angle: 360,
+            duration: 2000,
+            repeat: -1
+        });
+    }
+
+    spawnMeteorite() {
+        const cam = this.scene.cameras.main;
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? -20 : this.gameWidth + 20;
+        const y = Phaser.Math.Between(cam.scrollY, cam.scrollY + cam.height);
+        const meteorite = this.darts.create(x, y, 'meteorite');
+        meteorite.setVelocityX(fromLeft ? Phaser.Math.Between(150, 300) : Phaser.Math.Between(-300, -150));
+        meteorite.setVelocityY(Phaser.Math.Between(-100, 100));
+        meteorite.body.setAllowGravity(false);
+    }
+
     update(cameraY) {
         // If camera has moved up enough, generate new chunk above
         if (this.lastChunkY > cameraY - 800) {
             this.generateNextChunk();
         }
 
-        // Object Recycling (Pool strategy alternative: delete out-of-screen old objects)
+        // Object Recycling
         this.cleanup(this.platforms, cameraY);
         this.cleanup(this.breakablePlatforms, cameraY);
         this.cleanup(this.spikes, cameraY);
@@ -53,9 +98,7 @@ export default class LevelManager {
         this.cleanup(this.darts, cameraY);
         this.cleanup(this.shields, cameraY);
 
-        // Breakable logic (just collision detection handling in MainScene, this class just holds the physics groups)
-
-        // Enemy logic (move horizontally)
+        // Enemy / UFO logic (move horizontally)
         this.enemies.children.iterate((enemy) => {
             if (enemy && enemy.active) {
                 if (!enemy.initialX) enemy.initialX = enemy.x;
@@ -81,29 +124,76 @@ export default class LevelManager {
         if (chunkTopY <= this.targetY) {
             this.levelFinished = true;
 
-            // Add bridging platforms from lastChunkY up to targetY so the portal is always reachable
-            let platTexture = 'platform';
-            if (this.scene.level === 2) platTexture = 'plataforma2';
+            if (!this.isShipMode) {
+                // Add bridging platforms
+                let platTexture = 'platform';
+                if (this.scene.level === 2) platTexture = 'plataforma2';
 
-            let bridgeY = this.lastChunkY - 80;
-            while (bridgeY > this.targetY + 60) {
-                const bx = Phaser.Math.Between(60, this.gameWidth - 60);
-                const bp = this.platforms.create(bx, bridgeY, platTexture);
-                bp.setDisplaySize(64, 16).refreshBody();
-                this.makeOneWay(bp);
-                bridgeY -= Phaser.Math.Between(60, 90);
+                let bridgeY = this.lastChunkY - 80;
+                while (bridgeY > this.targetY + 60) {
+                    const bx = Phaser.Math.Between(60, this.gameWidth - 60);
+                    const bp = this.platforms.create(bx, bridgeY, platTexture);
+                    bp.setDisplaySize(64, 16).refreshBody();
+                    this.makeOneWay(bp);
+                    bridgeY -= Phaser.Math.Between(60, 90);
+                }
+
+                // Safe giant platform at the finish
+                const safeBase = this.platforms.create(300, this.targetY, 'platform').setScale(10, 2).refreshBody();
+                this.makeOneWay(safeBase);
             }
 
-            // Spawn safe giant platform at the finish line
-            const safeBase = this.platforms.create(300, this.targetY, 'platform').setScale(10, 2).refreshBody();
-            this.makeOneWay(safeBase);
             // Spawn portal
             this.exits.create(300, this.targetY - 80, 'portal');
             this.lastChunkY = this.targetY;
             return;
         }
 
-        // Decide difficulty based on height (lower Y = higher altitude)
+        if (this.isShipMode) {
+            this.generateShipChunk(chunkTopY);
+        } else {
+            this.generatePlatformChunk(chunkTopY);
+        }
+
+        this.lastChunkY = chunkTopY;
+    }
+
+    generateShipChunk(chunkTopY) {
+        // Level 4: spawn coins, shields, hyperdrive, and UFOs in open space
+        const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));
+
+        // Coins scattered
+        const numCoins = Phaser.Math.Between(2, 4);
+        for (let i = 0; i < numCoins; i++) {
+            const cx = Phaser.Math.Between(40, this.gameWidth - 40);
+            const cy = Phaser.Math.Between(chunkTopY, this.lastChunkY - 40);
+            this.coins.create(cx, cy, 'coin');
+        }
+
+        // Shield item (8% chance per chunk)
+        if (Phaser.Math.FloatBetween(0, 1) < 0.08) {
+            const sx = Phaser.Math.Between(60, this.gameWidth - 60);
+            const sy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
+            this.shields.create(sx, sy, 'shield');
+        }
+
+        // Hyperdrive item (7% chance, uses jetpack group)
+        if (Phaser.Math.FloatBetween(0, 1) < 0.07) {
+            const hx = Phaser.Math.Between(60, this.gameWidth - 60);
+            const hy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
+            this.jetpacks.create(hx, hy, 'hyperdrive');
+        }
+
+        // UFOs (enemies with oscillating movement, 15% + difficulty)
+        if (Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05)) {
+            const ux = Phaser.Math.Between(50, this.gameWidth - 50);
+            const uy = Phaser.Math.Between(chunkTopY + 30, this.lastChunkY - 30);
+            const ufo = this.enemies.create(ux, uy, 'ufo');
+            ufo.body.setSize(20, 12);
+        }
+    }
+
+    generatePlatformChunk(chunkTopY) {
         const difficulty = Math.max(1, Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1));
 
         let minGap = 80;
@@ -113,23 +203,19 @@ export default class LevelManager {
             maxGap = 80;
         }
 
-        // Platform generation
         for (let y = this.lastChunkY - minGap; y >= chunkTopY; y -= Phaser.Math.Between(minGap, maxGap)) {
-            // How many platforms in this row? (1 or 2)
             const numPlatforms = Phaser.Math.Between(1, 2);
             for (let i = 0; i < numPlatforms; i++) {
                 const x = Phaser.Math.Between(40, this.gameWidth - 40);
 
                 const isBreakable = this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05);
 
-                // Choose texture per level
                 let platTexture = 'platform';
                 if (this.scene.level === 2) platTexture = 'plataforma2';
-                if (this.scene.level === 3) platTexture = 'platform'; // Space uses default
+                if (this.scene.level === 3) platTexture = 'platform';
 
                 let plat;
                 if (this.scene.level === 3 && Phaser.Math.FloatBetween(0, 1) < 0.35) {
-                    // Moving platform in Level 3
                     plat = this.movingPlatforms.create(x, y, platTexture);
                     plat.setDisplaySize(64, 16);
                     plat.body.setAllowGravity(false);
@@ -144,7 +230,6 @@ export default class LevelManager {
                 }
                 this.makeOneWay(plat);
 
-                // Add spikes sometimes (NOT in Level 1 or Level 3)
                 let hasSpike = false;
                 if (this.scene.level !== 1 && this.scene.level !== 3 && !isBreakable && Phaser.Math.FloatBetween(0, 1) < (0.02 + difficulty * 0.01)) {
                     this.spikes.create(x, y - 16, 'spike');
@@ -152,25 +237,21 @@ export default class LevelManager {
                 }
 
                 if (!hasSpike) {
-                    // Add coins sometimes
                     if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
                         this.coins.create(x, y - 30, 'coin');
                     }
 
-                    // Add jetpacks rarely (5% chance, 8% in space)
                     const jetpackChance = this.scene.level === 3 ? 0.08 : 0.05;
                     if (Phaser.Math.FloatBetween(0, 1) < jetpackChance) {
                         this.jetpacks.create(x, y - 30, 'jetpack');
                     }
 
-                    // Add shields in Level 3 (6% chance)
                     if (this.scene.level >= 3 && Phaser.Math.FloatBetween(0, 1) < 0.06) {
                         this.shields.create(x, y - 30, 'shield');
                     }
                 }
             }
 
-            // Add enemy occasionally (Not in Level 1 or Level 3)
             if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
                 const ex = Phaser.Math.Between(50, this.gameWidth - 50);
                 const enemy = this.enemies.create(ex, y - 40, 'enemy');
@@ -178,11 +259,11 @@ export default class LevelManager {
             }
         }
 
-        // Add Dart traps on walls (not in Level 1 or Level 3)
-        if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
+        // Dart traps (not Level 1 or 3)
+        if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1) * 0.1)) {
             const isLeft = Math.random() < 0.5;
             const y = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
-            const dartTimer = this.scene.time.addEvent({
+            this.scene.time.addEvent({
                 delay: 2000,
                 callback: () => {
                     const dart = this.darts.create(isLeft ? 10 : this.gameWidth - 10, y, 'dart');
@@ -191,8 +272,6 @@ export default class LevelManager {
                 loop: true
             });
         }
-
-        this.lastChunkY = chunkTopY;
     }
 
     cleanup(group, cameraY) {

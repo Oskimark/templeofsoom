@@ -35,25 +35,26 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Level Buttons
-        const levelNames = ['Volcán', 'Cielo', 'Espacio'];
-        const levelColors = [0xff4500, 0x4488ff, 0x8800ff];
+        const levelNames = ['Volcán', 'Cielo', 'Espacio', 'Nave'];
+        const levelColors = [0xff4500, 0x4488ff, 0x8800ff, 0xffcc00];
         const btnY = height - 70;
-        const btnSpacing = 90;
-        const startX = width / 2 - btnSpacing;
+        const btnSpacing = 75;
+        const startX = width / 2 - (btnSpacing * 1.5);
 
         // Story data for each level (shown BEFORE starting that level)
         const storyData = [
-            null, // Level 1: no story, start directly
+            null, // Level 1: no story
             { storyKey: 'lev1', title: 'ESCAPASTE DEL VOLCÁN', desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...' },
-            { storyKey: 'lev2', noText: true }
+            { storyKey: 'lev2', noText: true },
+            { storyKey: 'lev2', title: '¡ABORDASTE LA NAVE!', desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!' }
         ];
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
             const bx = startX + i * btnSpacing;
             const level = i + 1;
 
             // Button background
-            const btnBg = this.add.rectangle(bx, btnY, 70, 40, levelColors[i], 0.8)
+            const btnBg = this.add.rectangle(bx, btnY, 60, 38, levelColors[i], 0.8)
                 .setStrokeStyle(2, 0xffffff, 0.9)
                 .setInteractive({ useHandCursor: true });
 
@@ -100,6 +101,9 @@ export default class MenuScene extends Phaser.Scene {
         });
         this.input.keyboard.on('keydown-THREE', () => {
             this.startLevel(3, storyData[2]);
+        });
+        this.input.keyboard.on('keydown-FOUR', () => {
+            this.startLevel(4, storyData[3]);
         });
         this.input.keyboard.on('keydown-SPACE', () => {
             this.startLevel(1, storyData[0]);

@@ -100,6 +100,62 @@ export default class Preloader extends Phaser.Scene {
         shieldGraphics.fillCircle(12, 12, 12);
         shieldGraphics.generateTexture('shield', 24, 24);
 
+        // Spaceship texture (Level 4 player)
+        const shipGfx = this.make.graphics();
+        shipGfx.fillStyle(0xcccccc);
+        shipGfx.beginPath();
+        shipGfx.moveTo(12, 0);
+        shipGfx.lineTo(24, 28);
+        shipGfx.lineTo(12, 22);
+        shipGfx.lineTo(0, 28);
+        shipGfx.fillPath();
+        shipGfx.fillStyle(0x00bfff);
+        shipGfx.fillRect(8, 10, 8, 6);
+        shipGfx.generateTexture('ship', 24, 28);
+
+        // Debris texture (rising from explosion)
+        const debrisGfx = this.make.graphics();
+        debrisGfx.fillStyle(0x888888);
+        debrisGfx.fillRect(0, 0, 20, 20);
+        debrisGfx.fillStyle(0x666666);
+        debrisGfx.fillRect(4, 4, 12, 12);
+        debrisGfx.generateTexture('debris', 20, 20);
+
+        // Meteorite texture (crosses laterally)
+        const meteorGfx = this.make.graphics();
+        meteorGfx.fillStyle(0x995533);
+        meteorGfx.fillCircle(10, 10, 10);
+        meteorGfx.fillStyle(0x774422);
+        meteorGfx.fillCircle(7, 7, 4);
+        meteorGfx.generateTexture('meteorite', 20, 20);
+
+        // UFO texture
+        const ufoGfx = this.make.graphics();
+        ufoGfx.fillStyle(0x44ff44);
+        ufoGfx.fillEllipse(12, 8, 24, 10);
+        ufoGfx.fillStyle(0x88ffaa);
+        ufoGfx.fillEllipse(12, 5, 12, 8);
+        ufoGfx.generateTexture('ufo', 24, 16);
+
+        // Explosion lava (yellow)
+        const lavaGfx3 = this.make.graphics();
+        lavaGfx3.fillStyle(0xffcc00, 0.9);
+        lavaGfx3.fillRect(0, 0, 600, 800);
+        lavaGfx3.generateTexture('lava_explosion', 600, 800);
+
+        // Hyperdrive item
+        const hyperGfx = this.make.graphics();
+        hyperGfx.fillStyle(0xff00ff);
+        hyperGfx.beginPath();
+        hyperGfx.moveTo(8, 0);
+        hyperGfx.lineTo(16, 8);
+        hyperGfx.lineTo(8, 6);
+        hyperGfx.lineTo(0, 8);
+        hyperGfx.fillPath();
+        hyperGfx.fillStyle(0xff88ff);
+        hyperGfx.fillRect(6, 8, 4, 12);
+        hyperGfx.generateTexture('hyperdrive', 16, 20);
+
         // Mobile Controls Textures
         const btnGraphics = this.make.graphics();
         btnGraphics.fillStyle(0xffffff, 0.5);
