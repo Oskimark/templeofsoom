@@ -57,7 +57,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.virtualJumpJustDown = false;
         this.virtualJumpJustReleased = false;
 
-        if (scene.sys.game.device.input.touch) {
+        if (!scene.sys.game.device.os.desktop && scene.sys.game.device.input.touch) {
             this.createMobileControls(scene);
         }
     }

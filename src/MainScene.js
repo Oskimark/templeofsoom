@@ -148,7 +148,11 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.lava, this.dieByLava, null, this);
         this.physics.add.overlap(this.player, this.levelManager.spikes, this.die, null, this);
         this.physics.add.overlap(this.player, this.levelManager.darts, this.die, null, this);
-        this.physics.add.overlap(this.player, this.levelManager.enemies, this.die, null, this);
+        if (!this.isShipMode) {
+            this.physics.add.overlap(this.player, this.levelManager.enemies, this.pushPlayer, null, this);
+        } else {
+            this.physics.add.overlap(this.player, this.levelManager.enemies, this.die, null, this);
+        }
 
         // Items & Exits
         this.physics.add.overlap(this.player, this.levelManager.coins, this.collectCoin, null, this);
@@ -305,6 +309,27 @@ export default class MainScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
             this.scene.start('GameOverScene', { score: totalScore, level: this.level });
         }, [], this);
+    }
+
+    pushPlayer(player, enemy) {
+        if (player.alpha < 1) return;
+
+        // Visual feedback
+        this.cameras.main.shake(200, 0.02);
+        player.setAlpha(0.5);
+        this.time.delayedCall(1000, () => {
+            if (player.active) player.setAlpha(1);
+        });
+
+        // Push logic: bounce away from enemy
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const angle = Math.atan2(dy, dx);
+
+        const pushForce = 600;
+        player.setVelocity(Math.cos(angle) * pushForce, Math.sin(angle) * pushForce - 300);
+
+        // Brief control lockout isn't strictly necessary but could add "impact"
     }
 
     die() {

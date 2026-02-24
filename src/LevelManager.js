@@ -89,8 +89,11 @@ export default class LevelManager {
             this.generateNextChunk();
         }
 
-        this.cleanup(this.platforms, cameraY);
-        this.cleanup(this.breakablePlatforms, cameraY);
+        // Platforms now persist to allow recovery from falls
+        // this.cleanup(this.platforms, cameraY);
+        // this.cleanup(this.breakablePlatforms, cameraY);
+        // this.cleanup(this.movingPlatforms, cameraY);
+
         this.cleanup(this.spikes, cameraY);
         this.cleanup(this.coins, cameraY);
         this.cleanup(this.jetpacks, cameraY);
@@ -235,11 +238,12 @@ export default class LevelManager {
                     if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
                         this.coins.create(x, y - 30, 'coin');
                     }
-                    const jetpackChance = this.scene.level === 3 ? 0.08 : 0.05;
+                    const jetpackChance = 0.08; // Balanced chance for all levels
                     if (Phaser.Math.FloatBetween(0, 1) < jetpackChance) {
                         this.jetpacks.create(x, y - 30, 'jetpack');
                     }
-                    if (this.scene.level >= 3 && Phaser.Math.FloatBetween(0, 1) < 0.06) {
+                    const shieldChance = 0.06; // Now available in levels 1, 2, and 3
+                    if (Phaser.Math.FloatBetween(0, 1) < shieldChance) {
                         this.shields.create(x, y - 30, 'shield');
                     }
                 }
