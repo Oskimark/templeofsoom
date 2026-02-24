@@ -12,6 +12,10 @@ export default class LevelManager {
         this.movingPlatforms = scene.physics.add.group({ allowGravity: false });
         this.shields = scene.physics.add.group({ allowGravity: false });
         this.barriers = scene.physics.add.staticGroup();
+        this.bullets = scene.physics.add.group({ allowGravity: false });
+        this.ammoCrates = scene.physics.add.group({ allowGravity: false });
+        this.movingBarriers = scene.physics.add.group({ allowGravity: false, immovable: true });
+        this.lethalEdges = scene.physics.add.group({ allowGravity: false, immovable: true });
 
         this.chunkHeight = 400;
         this.lastChunkY = 300;
@@ -102,6 +106,10 @@ export default class LevelManager {
         this.cleanup(this.darts, cameraY);
         this.cleanup(this.shields, cameraY);
         this.cleanup(this.barriers, cameraY);
+        this.cleanup(this.bullets, cameraY);
+        this.cleanup(this.ammoCrates, cameraY);
+        this.cleanup(this.movingBarriers, cameraY);
+        this.cleanup(this.lethalEdges, cameraY);
 
         this.enemies.children.iterate((enemy) => {
             if (enemy && enemy.active) {
@@ -116,6 +124,32 @@ export default class LevelManager {
                 plat.x = plat.initialX + Math.sin(this.scene.time.now / 1000 + plat.initialX) * 80;
             }
         });
+
+        // Moving Barriers and Lethal Edges logic
+        if (this.scene.level >= 7) {
+            const time = this.scene.time.now;
+            const drift = Math.sin(time / 1500) * 60; // Slower and less range
+
+            this.movingBarriers.children.iterate((barrier) => {
+                if (barrier && barrier.active) {
+                    const newX = barrier.initialX + drift;
+                    barrier.x = newX;
+                    if (barrier.body) {
+                        barrier.body.reset(barrier.x, barrier.y);
+                    }
+                }
+            });
+
+            this.lethalEdges.children.iterate((edge) => {
+                if (edge && edge.active) {
+                    const newX = edge.initialX + drift;
+                    edge.x = newX;
+                    if (edge.body) {
+                        edge.body.reset(edge.x, edge.y);
+                    }
+                }
+            });
+        }
     }
 
     generateNextChunk() {
@@ -161,7 +195,24 @@ export default class LevelManager {
             this.coins.create(cx, cy, 'coin');
         }
 
-        if (Phaser.Math.FloatBetween(0, 1) < 0.08) {
+        const hyperdriveChance = (this.scene.level >= 5) ? 0.15 : 0.07;
+        if (Phaser.Math.FloatBetween(0, 1) < hyperdriveChance) {
+            const hx = Phaser.Math.Between(60, this.gameWidth - 60);
+            const hy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
+            this.jetpacks.create(hx, hy, 'hyperdrive');
+        }
+
+        // Ammo crates - increased spawn
+        const ammoChance = (this.scene.level >= 5) ? 0.2 : 0.1;
+        if (this.scene.level >= 5 && Phaser.Math.FloatBetween(0, 1) < ammoChance) {
+            const ax = Phaser.Math.Between(60, this.gameWidth - 60);
+            const ay = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
+            this.ammoCrates.create(ax, ay, 'ammo');
+        }
+
+        // Shields in ship mode - increased spawn
+        const shieldChance = (this.scene.level >= 5) ? 0.15 : 0.08;
+        if (Phaser.Math.FloatBetween(0, 1) < shieldChance) {
             const sx = Phaser.Math.Between(60, this.gameWidth - 60);
             const sy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
             this.shields.create(sx, sy, 'shield');
@@ -174,24 +225,50 @@ export default class LevelManager {
             ufo.body.setSize(20, 12);
         }
 
-        // Level 5+: Barriers with a 15% gap
-        if (this.scene.level >= 5 && Phaser.Math.FloatBetween(0, 1) < 0.5) {
-            const gapWidth = this.gameWidth * 0.15;
-            const gapStart = Phaser.Math.Between(20, this.gameWidth - gapWidth - 20);
+        // Barrier generation logic
+        if (this.scene.level >= 5 && Phaser.Math.Between(0, 100) < 65) {
+            const level = this.scene.level;
+            const gapWidth = this.gameWidth * 0.20; // Increased to 20%
+            const margin = 80; // Safe distance from walls for the hole
+            const gapStart = Phaser.Math.Between(margin, this.gameWidth - gapWidth - margin);
             const gapEnd = gapStart + gapWidth;
             const y = chunkTopY + 200;
 
-            // Left part
-            if (gapStart > 0) {
-                const bLeft = this.barriers.create(gapStart / 2, y, 'barrier');
-                bLeft.setDisplaySize(gapStart, 32).refreshBody();
+            const isIndestructible = (level >= 6);
+            const texture = isIndestructible ? 'barrier_indestructible' : 'barrier';
+            const group = (level >= 7) ? this.movingBarriers : this.barriers;
+
+            // Left segment (Sliding Door)
+            const bLeft = group.create(gapStart - 300, y, texture);
+            bLeft.setDisplaySize(600, 32);
+            if (group === this.barriers) bLeft.refreshBody();
+            bLeft.isIndestructible = isIndestructible;
+            if (level >= 7) {
+                bLeft.isMoving = true;
+                bLeft.initialX = gapStart - 300;
+                bLeft.type = 'left';
             }
 
-            // Right part
-            const rightWidth = this.gameWidth - gapEnd;
-            if (rightWidth > 0) {
-                const bRight = this.barriers.create(gapEnd + rightWidth / 2, y, 'barrier');
-                bRight.setDisplaySize(rightWidth, 32).refreshBody();
+            // Right segment (Sliding Door)
+            const bRight = group.create(gapEnd + 300, y, texture);
+            bRight.setDisplaySize(600, 32);
+            if (group === this.barriers) bRight.refreshBody();
+            bRight.isIndestructible = isIndestructible;
+            if (level >= 7) {
+                bRight.isMoving = true;
+                bRight.initialX = gapEnd + 300;
+                bRight.type = 'right';
+            }
+
+            // Lethal edges (Level 8+)
+            if (level >= 8) {
+                const laserLeft = this.lethalEdges.create(gapStart, y, 'laser_edge');
+                laserLeft.setDisplaySize(8, 32);
+                laserLeft.initialX = gapStart;
+
+                const laserRight = this.lethalEdges.create(gapEnd, y, 'laser_edge');
+                laserRight.setDisplaySize(8, 32);
+                laserRight.initialX = gapEnd;
             }
         }
     }
@@ -285,6 +362,14 @@ export default class LevelManager {
                 },
                 loop: true
             });
+        }
+    }
+
+    fireBullet(x, y) {
+        const bullet = this.bullets.create(x, y, 'bullet');
+        if (bullet) {
+            bullet.setVelocityY(-800);
+            bullet.body.setAllowGravity(false);
         }
     }
 

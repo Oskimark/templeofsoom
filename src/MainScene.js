@@ -116,6 +116,9 @@ export default class MainScene extends Phaser.Scene {
         this.fuelBarBg = this.add.rectangle(75, 55, 100, 15, 0x555555).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
         this.fuelBar = this.add.rectangle(75, 55, 0, 15, 0x00bfff).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
 
+        // Ammo UI
+        this.ammoText = this.add.text(190, 46, `Ammo: ${this.player.ammo}`, { fontSize: '18px', fill: '#ffff00' }).setScrollFactor(0).setDepth(100);
+
         // Level Progress UI
         const width = this.cameras.main.width;
         this.progressBg = this.add.rectangle(width / 2, 25, 180, 15, 0x444444).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(100);
@@ -146,6 +149,10 @@ export default class MainScene extends Phaser.Scene {
 
         // Barrier collision
         this.physics.add.collider(this.player, this.levelManager.barriers, this.hitBarrier, null, this);
+        this.physics.add.collider(this.player, this.levelManager.movingBarriers, this.hitBarrier, null, this);
+
+        // Lethal edges (Level 8+)
+        this.physics.add.overlap(this.player, this.levelManager.lethalEdges, this.die, null, this);
 
         // Deadly Collisions
         this.physics.add.overlap(this.player, this.lava, this.dieByLava, null, this);
@@ -157,10 +164,43 @@ export default class MainScene extends Phaser.Scene {
             this.physics.add.overlap(this.player, this.levelManager.enemies, this.die, null, this);
         }
 
+        // Enemies vs Lethal edges
+        this.physics.add.overlap(this.levelManager.enemies, this.levelManager.lethalEdges, (enemy, edge) => {
+            if (enemy.active) {
+                this.explosionSound.play();
+                const boom = this.add.sprite(enemy.x, enemy.y, 'ufo').setTint(0xff0000);
+                this.tweens.add({ targets: boom, alpha: 0, scale: 2, duration: 500, onComplete: () => boom.destroy() });
+                enemy.destroy();
+            }
+        }, null, this);
+
+        // Bullet collisions
+        this.physics.add.overlap(this.levelManager.bullets, [this.levelManager.barriers, this.levelManager.movingBarriers], (bullet, barrier) => {
+            bullet.destroy();
+            if (!barrier.isIndestructible) {
+                barrier.destroy();
+            }
+        }, null, this);
+        this.physics.add.overlap(this.levelManager.bullets, this.levelManager.enemies, (bullet, enemy) => {
+            bullet.destroy();
+            enemy.destroy();
+        }, null, this);
+
+        // Meteorite vs Barrier
+        this.physics.add.overlap(this.levelManager.darts, [this.levelManager.barriers, this.levelManager.movingBarriers], (dart, barrier) => {
+            if (dart.texture.key === 'meteorite') {
+                dart.destroy();
+                if (!barrier.isIndestructible) {
+                    barrier.destroy();
+                }
+            }
+        }, null, this);
+
         // Items & Exits
         this.physics.add.overlap(this.player, this.levelManager.coins, this.collectCoin, null, this);
         this.physics.add.overlap(this.player, this.levelManager.jetpacks, this.collectJetpack, null, this);
         this.physics.add.overlap(this.player, this.levelManager.shields, this.collectShield, null, this);
+        this.physics.add.overlap(this.player, this.levelManager.ammoCrates, this.collectAmmo, null, this);
         this.physics.add.overlap(this.player, this.levelManager.exits, this.finishLevel, null, this);
     }
 
@@ -191,6 +231,9 @@ export default class MainScene extends Phaser.Scene {
         // Update Fuel UI
         const fuelPercentage = this.player.jetpackFuel / this.player.maxJetpackFuel;
         this.fuelBar.width = 100 * fuelPercentage;
+
+        // Update Ammo UI
+        this.ammoText.setText(`Ammo: ${this.player.ammo}`);
 
         // Update Level Progress UI
         const startY = 500; // where the player starts
@@ -258,6 +301,12 @@ export default class MainScene extends Phaser.Scene {
     collectShield(player, shield) {
         shield.destroy();
         player.activateShield();
+    }
+
+    collectAmmo(player, ammo) {
+        ammo.destroy();
+        player.ammo += 2;
+        this.score += 50;
         this.cameras.main.flash(200, 0, 255, 136); // Green flash
     }
 
@@ -336,18 +385,26 @@ export default class MainScene extends Phaser.Scene {
     }
 
     hitBarrier(player, barrier) {
-        // Visual feedback
-        this.cameras.main.shake(200, 0.03);
-        this.cameras.main.flash(100, 255, 0, 0); // Brief red flash
+        // If player has a shield, they can break through!
+        if (player.hasShield) {
+            this.cameras.main.shake(100, 0.02);
+            player.removeShield();
+            barrier.destroy();
+            return;
+        }
 
-        // Ship mode: push back (downward in Y axis)
-        // If ship mode is active, the ship is escaping 'up'
-        if (this.isShipMode) {
-            player.setVelocityY(400); // Strong push downward
-            player.setAccelerationY(0); // Cancel current acceleration
-        } else {
-            // Unexpected case: barrier in platformer level
-            player.setVelocityY(this.isShipMode ? 400 : 200);
+        // Only cause bounce if impact is from below (one-way)
+        // Since the ship escapes 'up', impact from below means player.y > barrier.y
+        if (player.y > barrier.y) {
+            this.cameras.main.shake(200, 0.03);
+            this.cameras.main.flash(100, 255, 0, 0);
+
+            if (this.isShipMode) {
+                player.setVelocityY(400);
+                player.setAccelerationY(0);
+            } else {
+                player.setVelocityY(200);
+            }
         }
     }
 
@@ -358,6 +415,10 @@ export default class MainScene extends Phaser.Scene {
             this.cameras.main.shake(200, 0.02);
             // Brief invulnerability after shield break
             this.player.setAlpha(0.5);
+            // Small bounce to push away from lethal source
+            this.player.setVelocityY(this.player.body.velocity.y > 0 ? -300 : 300);
+            this.player.setVelocityX(this.player.x < 300 ? 200 : -200);
+
             this.time.delayedCall(1500, () => {
                 if (this.player.active) this.player.setAlpha(1);
             });

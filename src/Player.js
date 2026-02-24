@@ -38,6 +38,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.hasShield = false;
         this.shieldGraphic = null;
 
+        // Weaponry
+        this.ammo = 0;
+        this.lastFired = 0;
+        this.fireRate = 250; // ms
+
         // Keys
         this.cursors = scene.input.keyboard.createCursorKeys();
         this.keys = scene.input.keyboard.addKeys({
@@ -180,13 +185,46 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.setVelocityY(Math.max(this.body.velocity.y - 2, -80));
         }
 
-        // Hyperdrive (space key) - boosts upward
-        const hyperdriveActive = (this.cursors.up.isDown && this.keys.space.isDown) || (this.virtualJump && this.virtualUp);
-        if (this.jetpackFuel > 0 && hyperdriveActive) {
+        // Hyperdrive & Shooting (space key)
+        const hyperdriveInput = (this.cursors.up.isDown && this.keys.space.isDown) || (this.virtualJump && this.virtualUp);
+        const shootInput = this.keys.space.isDown && !hyperdriveInput;
+
+        // Space always activates hyperdrive if fuel > 0
+        if (this.jetpackFuel > 0 && (this.keys.space.isDown || hyperdriveInput)) {
             this.setVelocityY(-500);
             this.jetpackFuel -= delta * 0.08;
             if (this.jetpackFuel <= 0) this.jetpackFuel = 0;
+
+            // Hyperdrive Trail
+            if (time > (this.lastTrailTime || 0)) {
+                this.createTrail();
+                this.lastTrailTime = time + 50;
+            }
         }
+
+        // Space also fires bullets if ammo > 0
+        if (this.keys.space.isDown && this.ammo > 0 && time > this.lastFired) {
+            this.shoot();
+            this.lastFired = time + this.fireRate;
+        }
+    }
+
+    createTrail() {
+        const trail = this.scene.add.sprite(this.x, this.y, 'ship');
+        trail.setAlpha(0.6).setScale(this.scaleX, this.scaleY).setAngle(this.angle);
+        trail.setTint(0x00ffff);
+        this.scene.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scale: 0.5,
+            duration: 400,
+            onComplete: () => trail.destroy()
+        });
+    }
+
+    shoot() {
+        this.ammo--;
+        this.scene.levelManager.fireBullet(this.x, this.y - 12);
     }
 
     updatePlatformerMode(time, delta) {

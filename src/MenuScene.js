@@ -35,21 +35,25 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Level Buttons
-        const levelNames = ['Volcán', 'Cielo', 'Espacio', 'Nave'];
-        const levelColors = [0xff4500, 0x4488ff, 0x8800ff, 0xffcc00];
+        const levelNames = ['Volcán', 'Cielo', 'Espacio', 'Nave', 'Abismo', 'Muro', 'Eco', 'Foso'];
+        const levelColors = [0xff4500, 0x4488ff, 0x8800ff, 0xffcc00, 0x00ff88, 0x330033, 0xffffff, 0xff0000];
         const btnY = height - 70;
-        const btnSpacing = 75;
-        const startX = width / 2 - (btnSpacing * 1.5);
+        const btnSpacing = 74;
+        const startX = width / 2 - (btnSpacing * 3.5);
 
         // Story data for each level (shown BEFORE starting that level)
         const storyData = [
             null, // Level 1: no story
             { storyKey: 'lev1', title: 'ESCAPASTE DEL VOLCÁN', desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...' },
             { storyKey: 'lev2', noText: true },
-            { storyKey: 'lev2', title: '¡ABORDASTE LA NAVE!', desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!' }
+            { storyKey: 'levsh', title: '¡ABORDASTE LA NAVE!', desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!' },
+            { storyKey: 'levsh', title: 'PROFUNDIDADES', desc: 'Te adentras en el Abismo...\nEsquiva las barreras y\nsobrevive al caos.' },
+            { storyKey: 'levsh', title: 'INFRANQUEABLE', desc: 'Las barreras ahora son más\ngruesas y duras...\n¡No intentes dispararles!' },
+            { storyKey: 'levsh', title: 'ECO DEL ABISMO', desc: 'El espacio se retuerce...\nLas aberturas no se quedan\nquietas. ¡Apunta bien!' },
+            { storyKey: 'levsh', title: 'EL FOSO FINAL', desc: 'Los bordes brillan de rojo...\nUn roce significa la muerte.\n¡Precisión absoluta!' }
         ];
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 8; i++) {
             const bx = startX + i * btnSpacing;
             const level = i + 1;
 
@@ -104,6 +108,18 @@ export default class MenuScene extends Phaser.Scene {
         });
         this.input.keyboard.on('keydown-FOUR', () => {
             this.startLevel(4, storyData[3]);
+        });
+        this.input.keyboard.on('keydown-FIVE', () => {
+            this.startLevel(5, storyData[4]);
+        });
+        this.input.keyboard.on('keydown-SIX', () => {
+            this.startLevel(6, storyData[5]);
+        });
+        this.input.keyboard.on('keydown-SEVEN', () => {
+            this.startLevel(7, storyData[6]);
+        });
+        this.input.keyboard.on('keydown-EIGHT', () => {
+            this.startLevel(8, storyData[7]);
         });
         this.input.keyboard.on('keydown-SPACE', () => {
             this.startLevel(1, storyData[0]);

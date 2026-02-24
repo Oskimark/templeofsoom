@@ -14,6 +14,8 @@ export default class Preloader extends Phaser.Scene {
         this.load.image('lev1', 'images/lev1.png');
         this.load.image('lev2', 'images/lev2.png');
         this.load.image('plataforma2', 'images/plataforma2.png');
+        this.load.image('shipgo', 'images/shipgo.png');
+        this.load.image('levsh', 'images/levsh.png');
         // Create basic textures for the game programmatically
         // Player texture (a small square/rectangle)
         const playerGraphics = this.make.graphics();
@@ -172,6 +174,34 @@ export default class Preloader extends Phaser.Scene {
         barrierGfx.fillRect(0, 0, 600, 4);
         barrierGfx.fillRect(0, 28, 600, 4);
         barrierGfx.generateTexture('barrier', 600, 32);
+
+        // Bullet texture
+        const bulletGfx = this.make.graphics();
+        bulletGfx.fillStyle(0xffff00);
+        bulletGfx.fillRect(0, 0, 4, 12);
+        bulletGfx.generateTexture('bullet', 4, 12);
+
+        // Ammo texture
+        const ammoGfx = this.make.graphics();
+        ammoGfx.fillStyle(0x00ff00);
+        ammoGfx.fillRect(0, 0, 20, 20);
+        ammoGfx.lineStyle(2, 0xffffff);
+        ammoGfx.strokeRect(2, 2, 16, 16);
+        ammoGfx.generateTexture('ammo', 20, 20);
+
+        // Indestructible Barrier texture
+        const invBarrierGfx = this.make.graphics();
+        invBarrierGfx.fillStyle(0x330033); // Dark purple
+        invBarrierGfx.fillRect(0, 0, 600, 32);
+        invBarrierGfx.lineStyle(2, 0xff00ff, 0.5);
+        invBarrierGfx.strokeRect(0, 0, 600, 32);
+        invBarrierGfx.generateTexture('barrier_indestructible', 600, 32);
+
+        // Laser Edge texture
+        const laserGfx = this.make.graphics();
+        laserGfx.fillStyle(0xff0000);
+        laserGfx.fillRect(0, 0, 8, 32);
+        laserGfx.generateTexture('laser_edge', 8, 32);
     }
 
     create() {

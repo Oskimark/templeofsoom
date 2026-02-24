@@ -13,7 +13,8 @@ export default class GameOverScene extends Phaser.Scene {
         const height = this.cameras.main.height;
 
         // Background Cover image
-        const gameOverBg = this.add.image(width / 2, height / 2, 'gameover');
+        const bgKey = (this.level >= 4) ? 'shipgo' : 'gameover';
+        const gameOverBg = this.add.image(width / 2, height / 2, bgKey);
         // Calculate scaling to cover the whole screen properly
         const scaleX = width / gameOverBg.width;
         const scaleY = height / gameOverBg.height;
