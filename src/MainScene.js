@@ -144,6 +144,9 @@ export default class MainScene extends Phaser.Scene {
             this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
         }
 
+        // Barrier collision
+        this.physics.add.collider(this.player, this.levelManager.barriers, this.hitBarrier, null, this);
+
         // Deadly Collisions
         this.physics.add.overlap(this.player, this.lava, this.dieByLava, null, this);
         this.physics.add.overlap(this.player, this.levelManager.spikes, this.die, null, this);
@@ -330,6 +333,22 @@ export default class MainScene extends Phaser.Scene {
         player.setVelocity(Math.cos(angle) * pushForce, Math.sin(angle) * pushForce - 300);
 
         // Brief control lockout isn't strictly necessary but could add "impact"
+    }
+
+    hitBarrier(player, barrier) {
+        // Visual feedback
+        this.cameras.main.shake(200, 0.03);
+        this.cameras.main.flash(100, 255, 0, 0); // Brief red flash
+
+        // Ship mode: push back (downward in Y axis)
+        // If ship mode is active, the ship is escaping 'up'
+        if (this.isShipMode) {
+            player.setVelocityY(400); // Strong push downward
+            player.setAccelerationY(0); // Cancel current acceleration
+        } else {
+            // Unexpected case: barrier in platformer level
+            player.setVelocityY(this.isShipMode ? 400 : 200);
+        }
     }
 
     die() {

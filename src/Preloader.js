@@ -163,6 +163,15 @@ export default class Preloader extends Phaser.Scene {
         btnGraphics.lineStyle(4, 0x000000, 0.5);
         btnGraphics.strokeCircle(32, 32, 32);
         btnGraphics.generateTexture('btn_base', 64, 64);
+
+        // Barrier texture (metallic/industrial)
+        const barrierGfx = this.make.graphics();
+        barrierGfx.fillStyle(0x666666);
+        barrierGfx.fillRect(0, 0, 600, 32);
+        barrierGfx.fillStyle(0x444444);
+        barrierGfx.fillRect(0, 0, 600, 4);
+        barrierGfx.fillRect(0, 28, 600, 4);
+        barrierGfx.generateTexture('barrier', 600, 32);
     }
 
     create() {

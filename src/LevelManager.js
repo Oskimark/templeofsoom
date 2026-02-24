@@ -11,6 +11,7 @@ export default class LevelManager {
         this.exits = scene.physics.add.staticGroup();
         this.movingPlatforms = scene.physics.add.group({ allowGravity: false });
         this.shields = scene.physics.add.group({ allowGravity: false });
+        this.barriers = scene.physics.add.staticGroup();
 
         this.chunkHeight = 400;
         this.lastChunkY = 300;
@@ -100,6 +101,7 @@ export default class LevelManager {
         this.cleanup(this.enemies, cameraY);
         this.cleanup(this.darts, cameraY);
         this.cleanup(this.shields, cameraY);
+        this.cleanup(this.barriers, cameraY);
 
         this.enemies.children.iterate((enemy) => {
             if (enemy && enemy.active) {
@@ -165,17 +167,32 @@ export default class LevelManager {
             this.shields.create(sx, sy, 'shield');
         }
 
-        if (Phaser.Math.FloatBetween(0, 1) < 0.07) {
-            const hx = Phaser.Math.Between(60, this.gameWidth - 60);
-            const hy = Phaser.Math.Between(chunkTopY + 50, this.lastChunkY - 50);
-            this.jetpacks.create(hx, hy, 'hyperdrive');
-        }
-
         if (Phaser.Math.FloatBetween(0, 1) < (0.1 + difficulty * 0.05)) {
             const ux = Phaser.Math.Between(50, this.gameWidth - 50);
             const uy = Phaser.Math.Between(chunkTopY + 30, this.lastChunkY - 30);
             const ufo = this.enemies.create(ux, uy, 'ufo');
             ufo.body.setSize(20, 12);
+        }
+
+        // Level 5+: Barriers with a 15% gap
+        if (this.scene.level >= 5 && Phaser.Math.FloatBetween(0, 1) < 0.5) {
+            const gapWidth = this.gameWidth * 0.15;
+            const gapStart = Phaser.Math.Between(20, this.gameWidth - gapWidth - 20);
+            const gapEnd = gapStart + gapWidth;
+            const y = chunkTopY + 200;
+
+            // Left part
+            if (gapStart > 0) {
+                const bLeft = this.barriers.create(gapStart / 2, y, 'barrier');
+                bLeft.setDisplaySize(gapStart, 32).refreshBody();
+            }
+
+            // Right part
+            const rightWidth = this.gameWidth - gapEnd;
+            if (rightWidth > 0) {
+                const bRight = this.barriers.create(gapEnd + rightWidth / 2, y, 'barrier');
+                bRight.setDisplaySize(rightWidth, 32).refreshBody();
+            }
         }
     }
 
