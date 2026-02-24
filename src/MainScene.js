@@ -129,7 +129,18 @@ export default class MainScene extends Phaser.Scene {
         this.lava = this.add.image(300, this.lavaHeight, lavaTexture).setOrigin(0.5, 0).setDepth(50);
         this.physics.add.existing(this.lava);
         this.lava.body.setAllowGravity(false);
+        this.lava.body.setAllowGravity(false);
         this.lava.body.setImmovable(true);
+
+        // Level 9 Surge Logic Initialization
+        if (this.level === 9) {
+            this.baseLavaSpeed = this.lavaSpeed;
+            this.surgeActive = false;
+            this.warningActive = false;
+            this.nextSurgeTime = 8000; // First surge after 8s
+
+            this.warningGlow = this.add.image(width / 2, 300, 'warning_glow').setScrollFactor(0).setDepth(150).setAlpha(0);
+        }
 
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0, 0.1, 0, 100);
@@ -218,6 +229,37 @@ export default class MainScene extends Phaser.Scene {
         }
 
         // Lava logic
+        if (this.level === 9) {
+            const currentTime = time;
+
+            // Check for Surge Warning
+            if (!this.surgeActive && !this.warningActive && currentTime >= this.nextSurgeTime - 3000) {
+                this.warningActive = true;
+                this.tweens.add({
+                    targets: this.warningGlow,
+                    alpha: { from: 0, to: 0.6 },
+                    duration: 500,
+                    yoyo: true,
+                    repeat: 4
+                });
+            }
+
+            // Start Surge
+            if (!this.surgeActive && currentTime >= this.nextSurgeTime) {
+                this.surgeActive = true;
+                this.warningActive = false;
+                this.lavaSpeed = this.baseLavaSpeed * 4; // Abrupt growth
+                this.warningGlow.setAlpha(0.6).setTint(0xffaa00);
+
+                this.time.delayedCall(4000, () => {
+                    this.surgeActive = false;
+                    this.lavaSpeed = this.baseLavaSpeed;
+                    this.warningGlow.setAlpha(0);
+                    this.nextSurgeTime = time + 12000; // Next surge in 12s
+                });
+            }
+        }
+
         this.lavaHeight -= (this.lavaSpeed * (delta / 1000));
 
         this.lava.y = this.lavaHeight;

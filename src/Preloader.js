@@ -202,6 +202,12 @@ export default class Preloader extends Phaser.Scene {
         laserGfx.fillStyle(0xff0000);
         laserGfx.fillRect(0, 0, 8, 32);
         laserGfx.generateTexture('laser_edge', 8, 32);
+
+        // Warning Glow texture for Level 9
+        const warningGfx = this.make.graphics();
+        warningGfx.fillStyle(0xffaa00, 0.4);
+        warningGfx.fillRect(0, 0, 600, 600);
+        warningGfx.generateTexture('warning_glow', 600, 600);
     }
 
     create() {
