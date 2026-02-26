@@ -173,6 +173,21 @@ export default class MainScene extends Phaser.Scene {
             this.physics.add.collider(this.player, this.levelManager.movingPlatforms);
         }
 
+        // Controls: R (Reset), E (Exit), P (Pause)
+        this.input.keyboard.on('keydown-R', () => this.scene.restart());
+        this.input.keyboard.on('keydown-E', () => {
+            this.bgMusic.stop();
+            this.scene.start('MenuScene');
+        });
+        this.input.keyboard.on('keydown-P', () => this.togglePause());
+
+        // Pause UI
+        this.pauseOverlay = this.add.container(width / 2, 300).setScrollFactor(0).setDepth(200).setVisible(false);
+        const pauseBg = this.add.rectangle(0, 0, 400, 200, 0x000000, 0.8);
+        const pauseTitle = this.add.text(0, -60, 'PAUSE', { fontSize: '32px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        const pauseText = this.add.text(0, 20, 'R: Restart\nE: Main Menu\nP: Resume', { fontSize: '20px', fill: '#fff', align: 'center' }).setOrigin(0.5);
+        this.pauseOverlay.add([pauseBg, pauseTitle, pauseText]);
+
         // Barrier collision
         this.physics.add.collider(this.player, this.levelManager.barriers, this.hitBarrier, null, this);
         this.physics.add.collider(this.player, this.levelManager.movingBarriers, this.hitBarrier, null, this);
@@ -354,6 +369,22 @@ export default class MainScene extends Phaser.Scene {
         return `${minutesStr}:${secondsStr}.${msStr}`;
     }
 
+    togglePause() {
+        if (!this.player.active) return;
+
+        if (this.physics.world.isPaused) {
+            this.physics.resume();
+            this.isTimerRunning = true;
+            this.pauseOverlay.setVisible(false);
+            this.bgMusic.resume();
+        } else {
+            this.physics.pause();
+            this.isTimerRunning = false;
+            this.pauseOverlay.setVisible(true);
+            this.bgMusic.pause();
+        }
+    }
+
     hitBreakable(player, platform) {
         if (player.body.touching.down && platform.body.touching.up) {
             const px = platform.x;
@@ -422,7 +453,22 @@ export default class MainScene extends Phaser.Scene {
         this.cameras.main.flash(500, 255, 255, 255);
         this.time.delayedCall(1000, () => {
             const totalScore = this.maxHeight + this.score;
-            const timeData = { levelTime: this.elapsedTime, formattedTime: this.formatTime(this.elapsedTime) };
+
+            // Best Time Logic
+            const bestTimeKey = `bestTime_level_${this.level}`;
+            let bestTime = parseFloat(localStorage.getItem(bestTimeKey)) || Infinity;
+            if (this.elapsedTime < bestTime) {
+                bestTime = this.elapsedTime;
+                localStorage.setItem(bestTimeKey, bestTime);
+            }
+
+            const timeData = {
+                levelTime: this.elapsedTime,
+                formattedTime: this.formatTime(this.elapsedTime),
+                bestTime: bestTime,
+                formattedBestTime: this.formatTime(bestTime)
+            };
+
             if (this.level === 1) {
                 this.scene.start('StoryScene', {
                     storyKey: 'lev1', nextLevel: 2, score: totalScore,
@@ -511,11 +557,16 @@ export default class MainScene extends Phaser.Scene {
 
         const totalScore = this.maxHeight + this.score;
         this.time.delayedCall(1000, () => {
+            const bestTimeKey = `bestTime_level_${this.level}`;
+            const bestTime = parseFloat(localStorage.getItem(bestTimeKey)) || 0;
+
             this.scene.start('GameOverScene', {
                 score: totalScore,
                 level: this.level,
                 levelTime: this.elapsedTime,
-                formattedTime: this.formatTime(this.elapsedTime)
+                formattedTime: this.formatTime(this.elapsedTime),
+                bestTime: bestTime,
+                formattedBestTime: bestTime > 0 ? this.formatTime(bestTime) : '--:--.---'
             });
         }, [], this);
     }
@@ -639,11 +690,16 @@ export default class MainScene extends Phaser.Scene {
         const totalScore = this.maxHeight + this.score;
 
         this.time.delayedCall(1000, () => {
+            const bestTimeKey = `bestTime_level_${this.level}`;
+            const bestTime = parseFloat(localStorage.getItem(bestTimeKey)) || 0;
+
             this.scene.start('GameOverScene', {
                 score: totalScore,
                 level: this.level,
                 levelTime: this.elapsedTime,
-                formattedTime: this.formatTime(this.elapsedTime)
+                formattedTime: this.formatTime(this.elapsedTime),
+                bestTime: bestTime,
+                formattedBestTime: bestTime > 0 ? this.formatTime(bestTime) : '--:--.---'
             });
         }, [], this);
     }

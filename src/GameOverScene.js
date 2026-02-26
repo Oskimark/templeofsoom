@@ -7,6 +7,7 @@ export default class GameOverScene extends Phaser.Scene {
         this.finalScore = data.score || 0;
         this.level = data.level || 1;
         this.formattedTime = data.formattedTime || '';
+        this.formattedBestTime = data.formattedBestTime || '';
     }
 
     create() {
@@ -24,7 +25,7 @@ export default class GameOverScene extends Phaser.Scene {
         gameOverBg.setScale(scale).setScrollFactor(0);
         gameOverBg.setTint(0xdddddd);
 
-        const statsText = `Level: ${this.level}\nScore: ${this.finalScore}\nTime: ${this.formattedTime}`;
+        const statsText = `Level: ${this.level}\nScore: ${this.finalScore}\nTime: ${this.formattedTime}\nBest: ${this.formattedBestTime}`;
         this.add.text(width / 2, height / 2, statsText, {
             fontSize: '24px',
             fill: '#fff',

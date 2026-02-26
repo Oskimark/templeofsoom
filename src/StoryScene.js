@@ -11,6 +11,7 @@ export default class StoryScene extends Phaser.Scene {
         this.storyDesc = data.desc || '';
         this.noText = data.noText || false;
         this.formattedTime = data.formattedTime || '';
+        this.formattedBestTime = data.formattedBestTime || '';
     }
 
     create() {
@@ -58,6 +59,17 @@ export default class StoryScene extends Phaser.Scene {
                         fontStyle: 'bold'
                     }).setOrigin(0.5);
                     storyTextContainer.add(timeText);
+                }
+
+                if (this.formattedBestTime) {
+                    const bestText = this.add.text(0, 110, `Best: ${this.formattedBestTime}`, {
+                        fontSize: '18px',
+                        fill: '#ffd700',
+                        stroke: '#000000',
+                        strokeThickness: 3,
+                        fontStyle: 'bold'
+                    }).setOrigin(0.5);
+                    storyTextContainer.add(bestText);
                 }
             }
         }
