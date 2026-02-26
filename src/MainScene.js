@@ -16,22 +16,24 @@ export default class MainScene extends Phaser.Scene {
         this.levelTargetY = -4000 - (this.level * 2000);
         this.isShipMode = (this.level >= 4);
 
-        // Setting up level specific palettes
-        let bgmKey = 'bg_music_1'; // Default
+        // Music selection
+        const shipMusic = [
+            'music_horizon1', 'music_horizon2', 'music_quantum1',
+            'music_quantum2', 'music_collapse', 'music_overload'
+        ];
+
+        let bgmKey = 'music_tribal'; // Default for level 1
+        if (this.level > 1) {
+            bgmKey = shipMusic[(this.level - 2) % shipMusic.length];
+        }
+
         let lavaTexture = 'lava';
 
         if (this.level === 1) {
-            bgmKey = 'bg_music_2'; // Tribal Apex
             this.cameras.main.setBackgroundColor('#3e2723'); // Dark brown/earthy
-            lavaTexture = 'lava';
         } else if (this.level === 2) {
-            bgmKey = 'bg_music_1';
-            lavaTexture = 'lava'; // Orange lava
             this.cameras.main.setBackgroundColor('#ff4500');
-            // We'll update the bg color dynamically in update() based on player progress
         } else if (this.level === 3) {
-            bgmKey = 'bg_music_1';
-            lavaTexture = 'lava'; // Orange lava in all levels
             this.cameras.main.setBackgroundColor('#000000');
             // Twinkling stars
             this.stars = [];
@@ -51,7 +53,6 @@ export default class MainScene extends Phaser.Scene {
                 this.stars.push(star);
             }
         } else if (this.level >= 4) {
-            bgmKey = 'bg_music_1';
             lavaTexture = 'lava_explosion'; // Yellow explosion
             this.cameras.main.setBackgroundColor('#000000');
             // Twinkling stars
@@ -79,7 +80,9 @@ export default class MainScene extends Phaser.Scene {
 
         // Lava
         this.lavaHeight = 800; // Start lava far down
-        this.lavaSpeed = 30 + (this.level * 5); // Constant base lava, slightly faster each level
+        let baseLavaSpeed = 40 + (this.level * 8);
+        if (this.level === 9) baseLavaSpeed *= 2; // Doubled for Level 9
+        this.lavaSpeed = baseLavaSpeed;
 
         this.levelManager = new LevelManager(this);
 
@@ -137,10 +140,22 @@ export default class MainScene extends Phaser.Scene {
             this.baseLavaSpeed = this.lavaSpeed;
             this.surgeActive = false;
             this.warningActive = false;
-            this.nextSurgeTime = 8000; // First surge after 8s
+            this.levelTimer = 0;
+            this.nextSurgeTime = 12000; // First surge after 12s
 
             this.warningGlow = this.add.image(width / 2, 300, 'warning_glow').setScrollFactor(0).setDepth(150).setAlpha(0);
         }
+
+        // Timer initialization
+        this.elapsedTime = 0;
+        this.isTimerRunning = true;
+        this.timerText = this.add.text(width - 16, 16, '00:00.000', {
+            fontSize: '20px',
+            fill: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
         // Camera setup
         this.cameras.main.startFollow(this.player, true, 0, 0.1, 0, 100);
@@ -178,10 +193,24 @@ export default class MainScene extends Phaser.Scene {
         // Enemies vs Lethal edges
         this.physics.add.overlap(this.levelManager.enemies, this.levelManager.lethalEdges, (enemy, edge) => {
             if (enemy.active) {
-                this.explosionSound.play();
-                const boom = this.add.sprite(enemy.x, enemy.y, 'ufo').setTint(0xff0000);
-                this.tweens.add({ targets: boom, alpha: 0, scale: 2, duration: 500, onComplete: () => boom.destroy() });
-                enemy.destroy();
+                this.explodeEnemy(enemy);
+            }
+        }, null, this);
+
+        // Enemies vs Barriers (Level 5+)
+        if (this.level >= 5) {
+            this.physics.add.collider(this.levelManager.enemies, [this.levelManager.barriers, this.levelManager.movingBarriers], (enemy, barrier) => {
+                if (enemy.active && enemy.isPursuing) {
+                    this.explodeEnemy(enemy);
+                }
+            }, null, this);
+        }
+
+        // Enemies vs Meteorites
+        this.physics.add.overlap(this.levelManager.enemies, this.levelManager.darts, (enemy, dart) => {
+            if (enemy.active && dart.texture.key === 'meteorite') {
+                this.explodeEnemy(enemy);
+                dart.destroy();
             }
         }, null, this);
 
@@ -195,6 +224,14 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.levelManager.bullets, this.levelManager.enemies, (bullet, enemy) => {
             bullet.destroy();
             enemy.destroy();
+        }, null, this);
+        this.physics.add.overlap(this.levelManager.bullets, this.levelManager.darts, (bullet, dart) => {
+            bullet.destroy();
+            dart.destroy();
+        }, null, this);
+        this.physics.add.overlap(this.levelManager.bullets, this.levelManager.breakablePlatforms, (bullet, plat) => {
+            bullet.destroy();
+            plat.destroy();
         }, null, this);
 
         // Meteorite vs Barrier
@@ -213,13 +250,14 @@ export default class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.levelManager.shields, this.collectShield, null, this);
         this.physics.add.overlap(this.player, this.levelManager.ammoCrates, this.collectAmmo, null, this);
         this.physics.add.overlap(this.player, this.levelManager.exits, this.finishLevel, null, this);
+        this.physics.add.overlap(this.player, this.levelManager.electricBeams, this.die, null, this);
     }
 
     update(time, delta) {
         if (!this.player.active) return;
 
         this.player.update(time, delta);
-        this.levelManager.update(this.cameras.main.scrollY);
+        this.levelManager.update(this.cameras.main.scrollY, delta);
 
         // Calculate score based on height
         const currentHeightScore = Math.floor(Math.abs(Math.min(0, this.player.y - 600)));
@@ -230,10 +268,10 @@ export default class MainScene extends Phaser.Scene {
 
         // Lava logic
         if (this.level === 9) {
-            const currentTime = time;
+            this.levelTimer += delta;
 
             // Check for Surge Warning
-            if (!this.surgeActive && !this.warningActive && currentTime >= this.nextSurgeTime - 3000) {
+            if (!this.surgeActive && !this.warningActive && this.levelTimer >= this.nextSurgeTime - 3000) {
                 this.warningActive = true;
                 this.tweens.add({
                     targets: this.warningGlow,
@@ -245,17 +283,17 @@ export default class MainScene extends Phaser.Scene {
             }
 
             // Start Surge
-            if (!this.surgeActive && currentTime >= this.nextSurgeTime) {
+            if (!this.surgeActive && this.levelTimer >= this.nextSurgeTime) {
                 this.surgeActive = true;
                 this.warningActive = false;
-                this.lavaSpeed = this.baseLavaSpeed * 4; // Abrupt growth
+                this.lavaSpeed = this.baseLavaSpeed * 2.5; // Slower growth
                 this.warningGlow.setAlpha(0.6).setTint(0xffaa00);
 
                 this.time.delayedCall(4000, () => {
                     this.surgeActive = false;
                     this.lavaSpeed = this.baseLavaSpeed;
                     this.warningGlow.setAlpha(0);
-                    this.nextSurgeTime = time + 12000; // Next surge in 12s
+                    this.nextSurgeTime = this.levelTimer + 7000; // More frequent (7s interval)
                 });
             }
         }
@@ -296,6 +334,24 @@ export default class MainScene extends Phaser.Scene {
             const hex = (r << 16) | (g << 8) | b;
             this.cameras.main.setBackgroundColor(hex);
         }
+
+        // Update Timer
+        if (this.isTimerRunning) {
+            this.elapsedTime += delta;
+            this.timerText.setText(this.formatTime(this.elapsedTime));
+        }
+    }
+
+    formatTime(ms) {
+        let milliseconds = Math.floor(ms % 1000);
+        let seconds = Math.floor((ms / 1000) % 60);
+        let minutes = Math.floor((ms / (1000 * 60)) % 60);
+
+        const minutesStr = minutes.toString().padStart(2, '0');
+        const secondsStr = seconds.toString().padStart(2, '0');
+        const msStr = milliseconds.toString().padStart(3, '0');
+
+        return `${minutesStr}:${secondsStr}.${msStr}`;
     }
 
     hitBreakable(player, platform) {
@@ -359,28 +415,82 @@ export default class MainScene extends Phaser.Scene {
     }
 
     finishLevel() {
+        this.isTimerRunning = false;
         this.player.setActive(false).setVisible(false);
         this.physics.pause();
         this.bgMusic.stop();
         this.cameras.main.flash(500, 255, 255, 255);
         this.time.delayedCall(1000, () => {
             const totalScore = this.maxHeight + this.score;
+            const timeData = { levelTime: this.elapsedTime, formattedTime: this.formatTime(this.elapsedTime) };
             if (this.level === 1) {
                 this.scene.start('StoryScene', {
                     storyKey: 'lev1', nextLevel: 2, score: totalScore,
                     title: 'ESCAPASTE DEL VOLCÁN',
-                    desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...'
+                    desc: 'Has logrado salir a la\nsuperficie, pero la travesía\ncontinúa hacia los cielos...',
+                    ...timeData
                 });
             } else if (this.level === 2) {
                 this.scene.start('StoryScene', {
                     storyKey: 'lev2', nextLevel: 3, score: totalScore,
-                    noText: true
+                    noText: true,
+                    ...timeData
                 });
             } else if (this.level === 3) {
                 this.scene.start('StoryScene', {
                     storyKey: 'lev2', nextLevel: 4, score: totalScore,
                     title: '¡ABORDASTE LA NAVE!',
-                    desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!'
+                    desc: 'El planeta explota detrás tuyo...\n¡Esquiva los escombros y\nescapa al hiperespacio!',
+                    ...timeData
+                });
+            } else if (this.level === 4) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 5, score: totalScore,
+                    title: 'PROFUNDIDADES',
+                    desc: 'Te adentras en el Abismo...\nEsquiva las barreras y\nsobrevive al caos.',
+                    ...timeData
+                });
+            } else if (this.level === 5) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 6, score: totalScore,
+                    title: 'INFRANQUEABLE',
+                    desc: 'Las barreras ahora son más\ngruesas y duras...\n¡No intentes dispararles!',
+                    ...timeData
+                });
+            } else if (this.level === 6) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 7, score: totalScore,
+                    title: 'ECO DEL ABISMO',
+                    desc: 'El espacio se retuerce...\nLas aberturas no se quedan\nquietas. ¡Apunta bien!',
+                    ...timeData
+                });
+            } else if (this.level === 7) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 8, score: totalScore,
+                    title: 'EL FOSO FINAL',
+                    desc: 'Los bordes brillan de rojo...\nUn roce significa la muerte.\n¡Precisión absoluta!',
+                    ...timeData
+                });
+            } else if (this.level === 8) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 9, score: totalScore,
+                    title: 'FUGA DESESPERADA',
+                    desc: '¡la onda expansiva se acerca!\nesto causa empujones al borde de plasma.\n¡Cuando todo se ponga amarillo, vuela más rápido que nunca!',
+                    ...timeData
+                });
+            } else if (this.level === 9) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 10, score: totalScore,
+                    title: 'VOLTAJE CRÍTICO',
+                    desc: 'El sistema está en corto...\nRayos de plasma cierran el paso.\n¡Calcula bien el tiempo!',
+                    ...timeData
+                });
+            } else if (this.level === 10) {
+                this.scene.start('StoryScene', {
+                    storyKey: 'levsh', nextLevel: 11, score: totalScore,
+                    title: 'PERSECUCIÓN',
+                    desc: 'Los radares detectan OVNIs...\n¡Se acercan por detrás!\nUsa el auto-apuntado para\nsobrevivir a la cacería.',
+                    ...timeData
                 });
             } else {
                 this.scene.start('MainScene', { level: this.level + 1, score: totalScore });
@@ -401,12 +511,23 @@ export default class MainScene extends Phaser.Scene {
 
         const totalScore = this.maxHeight + this.score;
         this.time.delayedCall(1000, () => {
-            this.scene.start('GameOverScene', { score: totalScore, level: this.level });
+            this.scene.start('GameOverScene', {
+                score: totalScore,
+                level: this.level,
+                levelTime: this.elapsedTime,
+                formattedTime: this.formatTime(this.elapsedTime)
+            });
         }, [], this);
     }
 
     pushPlayer(player, enemy) {
         if (player.alpha < 1) return;
+
+        // Level 11 UFOs are lethal
+        if (this.level >= 11 && enemy.texture.key === 'ufo') {
+            this.die();
+            return;
+        }
 
         // Visual feedback
         this.cameras.main.shake(200, 0.02);
@@ -426,12 +547,49 @@ export default class MainScene extends Phaser.Scene {
         // Brief control lockout isn't strictly necessary but could add "impact"
     }
 
+    explodeEnemy(enemy) {
+        if (!enemy.active) return;
+        this.explosionSound.play();
+        const boom = this.add.sprite(enemy.x, enemy.y, enemy.texture.key).setTint(0xff0000);
+        this.tweens.add({
+            targets: boom,
+            alpha: 0,
+            scale: 2,
+            duration: 500,
+            onComplete: () => boom.destroy()
+        });
+
+        // Reward: Goal 10% closer if it's a UFO
+        if (enemy.texture.key === 'ufo') {
+            const totalLength = 4000 + (this.level * 2000);
+            const reduction = totalLength * 0.10;
+            this.levelTargetY += reduction;
+            // Prevent goal from moving below player's current height significantly
+            this.levelTargetY = Math.min(this.levelTargetY, this.player.y - 1000);
+            this.levelManager.updateTargetY(this.levelTargetY);
+
+            // Visual feedback for reward
+            const rewardText = this.add.text(enemy.x, enemy.y, '¡META +10%!', { fontSize: '24px', fill: '#00ff00', fontStyle: 'bold' });
+            this.tweens.add({
+                targets: rewardText,
+                y: rewardText.y - 100,
+                alpha: 0,
+                duration: 1000,
+                onComplete: () => rewardText.destroy()
+            });
+        }
+
+        enemy.destroy();
+    }
+
     hitBarrier(player, barrier) {
-        // If player has a shield, they can break through!
+        // If player has a shield, they can break through! (Only for destructible barriers)
         if (player.hasShield) {
             this.cameras.main.shake(100, 0.02);
             player.removeShield();
-            barrier.destroy();
+            if (!barrier.isIndestructible) {
+                barrier.destroy();
+            }
             return;
         }
 
@@ -481,7 +639,12 @@ export default class MainScene extends Phaser.Scene {
         const totalScore = this.maxHeight + this.score;
 
         this.time.delayedCall(1000, () => {
-            this.scene.start('GameOverScene', { score: totalScore, level: this.level });
+            this.scene.start('GameOverScene', {
+                score: totalScore,
+                level: this.level,
+                levelTime: this.elapsedTime,
+                formattedTime: this.formatTime(this.elapsedTime)
+            });
         }, [], this);
     }
 }

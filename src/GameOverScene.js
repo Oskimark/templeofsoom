@@ -6,6 +6,7 @@ export default class GameOverScene extends Phaser.Scene {
     init(data) {
         this.finalScore = data.score || 0;
         this.level = data.level || 1;
+        this.formattedTime = data.formattedTime || '';
     }
 
     create() {
@@ -13,7 +14,8 @@ export default class GameOverScene extends Phaser.Scene {
         const height = this.cameras.main.height;
 
         // Background Cover image
-        const bgKey = (this.level >= 4) ? 'shipgo' : 'gameover';
+        // USER REQUEST: always show game over.png (key: 'gameover')
+        const bgKey = 'gameover';
         const gameOverBg = this.add.image(width / 2, height / 2, bgKey);
         // Calculate scaling to cover the whole screen properly
         const scaleX = width / gameOverBg.width;
@@ -22,11 +24,13 @@ export default class GameOverScene extends Phaser.Scene {
         gameOverBg.setScale(scale).setScrollFactor(0);
         gameOverBg.setTint(0xdddddd);
 
-        this.add.text(width / 2, height / 2, `Level: ${this.level} - Score: ${this.finalScore}`, {
+        const statsText = `Level: ${this.level}\nScore: ${this.finalScore}\nTime: ${this.formattedTime}`;
+        this.add.text(width / 2, height / 2, statsText, {
             fontSize: '24px',
             fill: '#fff',
             stroke: '#000000',
-            strokeThickness: 5
+            strokeThickness: 5,
+            align: 'center'
         }).setOrigin(0.5);
 
         // Update High Score

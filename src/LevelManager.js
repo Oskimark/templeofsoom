@@ -16,6 +16,10 @@ export default class LevelManager {
         this.ammoCrates = scene.physics.add.group({ allowGravity: false });
         this.movingBarriers = scene.physics.add.group({ allowGravity: false, immovable: true });
         this.lethalEdges = scene.physics.add.group({ allowGravity: false, immovable: true });
+        this.electricBeams = scene.physics.add.group({ allowGravity: false, immovable: true });
+
+        this.beamToggleTime = 0;
+        this.beamsActive = true;
 
         this.chunkHeight = 400;
         this.lastChunkY = 300;
@@ -89,15 +93,10 @@ export default class LevelManager {
         meteorite.body.setAllowGravity(false);
     }
 
-    update(cameraY) {
+    update(cameraY, delta) {
         if (this.lastChunkY > cameraY - 800) {
             this.generateNextChunk();
         }
-
-        // Platforms now persist to allow recovery from falls
-        // this.cleanup(this.platforms, cameraY);
-        // this.cleanup(this.breakablePlatforms, cameraY);
-        // this.cleanup(this.movingPlatforms, cameraY);
 
         this.cleanup(this.spikes, cameraY);
         this.cleanup(this.coins, cameraY);
@@ -126,8 +125,8 @@ export default class LevelManager {
         });
 
         // Moving Barriers and Lethal Edges logic
+        const time = this.scene.time.now;
         if (this.scene.level >= 7) {
-            const time = this.scene.time.now;
             const drift = Math.sin(time / 1500) * 60; // Slower and less range
 
             this.movingBarriers.children.iterate((barrier) => {
@@ -146,6 +145,64 @@ export default class LevelManager {
                     edge.x = newX;
                     if (edge.body) {
                         edge.body.reset(edge.x, edge.y);
+                    }
+
+                    // Level 10 Flicker warning
+                    if (this.scene.level >= 10 && !this.beamsActive && this.beamToggleTime >= 750) {
+                        const isWhite = Math.floor(this.scene.time.now / 50) % 2 === 0;
+                        edge.setTint(isWhite ? 0xffffff : 0xff0000);
+                    } else {
+                        edge.setTint(0xff0000); // Default to red
+                    }
+                }
+            });
+
+            this.electricBeams.children.iterate((beam) => {
+                if (beam && beam.active) {
+                    const newX = beam.initialX + drift;
+                    beam.x = newX;
+                    if (beam.body) {
+                        beam.body.reset(beam.x, beam.y);
+                    }
+                }
+            });
+        }
+
+        // Toggling Electric Beams
+        if (this.scene.level >= 10) {
+            this.beamToggleTime += delta;
+            // Beam turns on at 1000ms
+            if (this.beamToggleTime >= 1000) {
+                this.beamToggleTime = 0;
+                this.beamsActive = !this.beamsActive;
+                this.electricBeams.getChildren().forEach(beam => {
+                    beam.setVisible(this.beamsActive);
+                    beam.active = this.beamsActive;
+                    if (beam.body) beam.body.enable = this.beamsActive;
+                });
+            }
+        }
+
+        // Level 11 UFO Pursuit
+        if (this.scene.level >= 11) {
+            this.enemies.getChildren().forEach(enemy => {
+                if (enemy.active && enemy.texture.key === 'ufo') {
+                    const dist = Phaser.Math.Distance.Between(this.scene.player.x, this.scene.player.y, enemy.x, enemy.y);
+                    if (dist < 300) {
+                        enemy.isPursuing = true;
+                    } else if (dist > 500) {
+                        enemy.isPursuing = false;
+                    }
+
+                    if (enemy.isPursuing) {
+                        // Aggressive pursuit
+                        this.scene.physics.moveToObject(enemy, this.scene.player, 180);
+                    } else {
+                        // Normal pattern (Sinusoidal)
+                        if (!enemy.initialX) enemy.initialX = enemy.x;
+                        const targetX = enemy.initialX + Math.sin(this.scene.time.now / 300 + enemy.initialX) * 50;
+                        enemy.setVelocityX((targetX - enemy.x) * 10);
+                        enemy.setVelocityY(0);
                     }
                 }
             });
@@ -202,7 +259,7 @@ export default class LevelManager {
             this.jetpacks.create(hx, hy, 'hyperdrive');
         }
 
-        // Ammo crates - increased spawn
+        // Ammo crates
         const ammoChance = (this.scene.level >= 5) ? 0.2 : 0.1;
         if (this.scene.level >= 5 && Phaser.Math.FloatBetween(0, 1) < ammoChance) {
             const ax = Phaser.Math.Between(60, this.gameWidth - 60);
@@ -210,7 +267,7 @@ export default class LevelManager {
             this.ammoCrates.create(ax, ay, 'ammo');
         }
 
-        // Shields in ship mode - increased spawn
+        // Shields
         const shieldChance = (this.scene.level >= 5) ? 0.15 : 0.08;
         if (Phaser.Math.FloatBetween(0, 1) < shieldChance) {
             const sx = Phaser.Math.Between(60, this.gameWidth - 60);
@@ -228,8 +285,8 @@ export default class LevelManager {
         // Barrier generation logic
         if (this.scene.level >= 5 && Phaser.Math.Between(0, 100) < 65) {
             const level = this.scene.level;
-            const gapWidth = this.gameWidth * 0.20; // Increased to 20%
-            const margin = 80; // Safe distance from walls for the hole
+            const gapWidth = this.gameWidth * 0.20;
+            const margin = 80;
             const gapStart = Phaser.Math.Between(margin, this.gameWidth - gapWidth - margin);
             const gapEnd = gapStart + gapWidth;
             const y = chunkTopY + 200;
@@ -238,7 +295,6 @@ export default class LevelManager {
             const texture = isIndestructible ? 'barrier_indestructible' : 'barrier';
             const group = (level >= 7) ? this.movingBarriers : this.barriers;
 
-            // Left segment (Sliding Door)
             const bLeft = group.create(gapStart - 300, y, texture);
             bLeft.setDisplaySize(600, 32);
             if (group === this.barriers) bLeft.refreshBody();
@@ -249,7 +305,6 @@ export default class LevelManager {
                 bLeft.type = 'left';
             }
 
-            // Right segment (Sliding Door)
             const bRight = group.create(gapEnd + 300, y, texture);
             bRight.setDisplaySize(600, 32);
             if (group === this.barriers) bRight.refreshBody();
@@ -260,15 +315,22 @@ export default class LevelManager {
                 bRight.type = 'right';
             }
 
-            // Lethal edges (Level 8+)
             if (level >= 8) {
                 const laserLeft = this.lethalEdges.create(gapStart, y, 'laser_edge');
                 laserLeft.setDisplaySize(8, 32);
                 laserLeft.initialX = gapStart;
-
                 const laserRight = this.lethalEdges.create(gapEnd, y, 'laser_edge');
                 laserRight.setDisplaySize(8, 32);
                 laserRight.initialX = gapEnd;
+            }
+
+            if (level >= 10 && Phaser.Math.Between(0, 100) < 50) {
+                const beam = this.electricBeams.create(gapStart + gapWidth / 2, y, 'electric_beam');
+                beam.setDisplaySize(gapWidth, 12);
+                beam.initialX = gapStart + gapWidth / 2;
+                beam.setVisible(this.beamsActive);
+                beam.active = this.beamsActive;
+                if (beam.body) beam.body.enable = this.beamsActive;
             }
         }
     }
@@ -292,7 +354,6 @@ export default class LevelManager {
             for (let i = 0; i < numPlatforms; i++) {
                 let x;
                 if (this.scene.level === 2) {
-                    // Guarantee reachability by constraining horizontal distance
                     const maxJumpDist = 160;
                     const minX = Math.max(40, this.lastPlatformX - maxJumpDist);
                     const maxX = Math.min(this.gameWidth - 40, this.lastPlatformX + maxJumpDist);
@@ -332,17 +393,14 @@ export default class LevelManager {
                     if (Phaser.Math.FloatBetween(0, 1) < 0.3) {
                         this.coins.create(x, y - 30, 'coin');
                     }
-                    const jetpackChance = 0.08; // Balanced chance for all levels
-                    if (Phaser.Math.FloatBetween(0, 1) < jetpackChance) {
+                    if (Phaser.Math.FloatBetween(0, 1) < 0.08) {
                         this.jetpacks.create(x, y - 30, 'jetpack');
                     }
-                    const shieldChance = 0.06; // Now available in levels 1, 2, and 3
-                    if (Phaser.Math.FloatBetween(0, 1) < shieldChance) {
+                    if (Phaser.Math.FloatBetween(0, 1) < 0.06) {
                         this.shields.create(x, y - 30, 'shield');
                     }
                 }
             }
-
             if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.05 + difficulty * 0.05)) {
                 const ex = Phaser.Math.Between(50, this.gameWidth - 50);
                 const enemy = this.enemies.create(ex, y - 40, 'enemy');
@@ -351,13 +409,13 @@ export default class LevelManager {
             this.lastPlatformX = rowX;
         }
 
-        if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + Math.min(10, Math.floor(Math.abs(chunkTopY) / 1000) + 1) * 0.1)) {
+        if (this.scene.level !== 1 && this.scene.level !== 3 && Phaser.Math.FloatBetween(0, 1) < (0.2 + difficulty * 0.1)) {
             const isLeft = Math.random() < 0.5;
-            const y = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
+            const ry = Phaser.Math.Between(chunkTopY, this.lastChunkY - 100);
             this.scene.time.addEvent({
                 delay: 2000,
                 callback: () => {
-                    const dart = this.darts.create(isLeft ? 10 : this.gameWidth - 10, y, 'dart');
+                    const dart = this.darts.create(isLeft ? 10 : this.gameWidth - 10, ry, 'dart');
                     if (dart) dart.setVelocityX(isLeft ? 200 : -200);
                 },
                 loop: true
@@ -365,12 +423,28 @@ export default class LevelManager {
         }
     }
 
-    fireBullet(x, y) {
+    fireBullet(x, y, angle = -Math.PI / 2) {
         const bullet = this.bullets.create(x, y, 'bullet');
         if (bullet) {
-            bullet.setVelocityY(-800);
+            const speed = 800;
+            bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
             bullet.body.setAllowGravity(false);
+            // Rotate bullet to face movement direction
+            bullet.rotation = angle + Math.PI / 2;
         }
+    }
+
+    updateTargetY(newY) {
+        this.targetY = newY;
+        // If the portal exit exists, move it to the new targetY
+        this.exits.getChildren().forEach(exit => {
+            if (exit.active) {
+                exit.y = this.targetY - 80;
+                if (exit.body) {
+                    exit.body.reset(exit.x, exit.y);
+                }
+            }
+        });
     }
 
     cleanup(group, cameraY) {

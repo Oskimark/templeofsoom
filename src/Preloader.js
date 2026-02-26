@@ -4,8 +4,13 @@ export default class Preloader extends Phaser.Scene {
     }
     preload() {
         // Load Audio
-        this.load.audio('bg_music_1', 'music/Event_Horizon_Cascade.mp3');
-        this.load.audio('bg_music_2', 'music/Tribal_Apex.mp3');
+        this.load.audio('music_tribal', 'music/Tribal_Apex.mp3');
+        this.load.audio('music_horizon1', 'music/Event_Horizon_Cascade.mp3');
+        this.load.audio('music_horizon2', 'music/Event_Horizon_Glide.mp3');
+        this.load.audio('music_quantum1', 'music/Quantum_Cascade.mp3');
+        this.load.audio('music_quantum2', 'music/Quantum_Cascade2.mp3');
+        this.load.audio('music_collapse', 'music/System_Collapse.mp3');
+        this.load.audio('music_overload', 'music/System_Overload.mp3');
         this.load.audio('explosion', 'music/explosion.mp3');
 
         // Load Images
@@ -199,7 +204,7 @@ export default class Preloader extends Phaser.Scene {
 
         // Laser Edge texture
         const laserGfx = this.make.graphics();
-        laserGfx.fillStyle(0xff0000);
+        laserGfx.fillStyle(0xffffff);
         laserGfx.fillRect(0, 0, 8, 32);
         laserGfx.generateTexture('laser_edge', 8, 32);
 
@@ -208,6 +213,14 @@ export default class Preloader extends Phaser.Scene {
         warningGfx.fillStyle(0xffaa00, 0.4);
         warningGfx.fillRect(0, 0, 600, 600);
         warningGfx.generateTexture('warning_glow', 600, 600);
+
+        // Electric Beam texture for Level 10
+        const electricGfx = this.make.graphics();
+        electricGfx.fillStyle(0x00ffff, 0.8);
+        electricGfx.fillRect(0, 0, 120, 10);
+        electricGfx.lineStyle(2, 0xffffff, 1);
+        electricGfx.strokeRect(0, 0, 120, 10);
+        electricGfx.generateTexture('electric_beam', 120, 10);
     }
 
     create() {

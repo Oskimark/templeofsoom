@@ -10,6 +10,7 @@ export default class StoryScene extends Phaser.Scene {
         this.storyTitle = data.title || '';
         this.storyDesc = data.desc || '';
         this.noText = data.noText || false;
+        this.formattedTime = data.formattedTime || '';
     }
 
     create() {
@@ -47,6 +48,17 @@ export default class StoryScene extends Phaser.Scene {
                 }).setOrigin(0.5);
 
                 storyTextContainer.add([titleText, descText]);
+
+                if (this.formattedTime) {
+                    const timeText = this.add.text(0, 80, `Time: ${this.formattedTime}`, {
+                        fontSize: '20px',
+                        fill: '#00ffff',
+                        stroke: '#000000',
+                        strokeThickness: 4,
+                        fontStyle: 'bold'
+                    }).setOrigin(0.5);
+                    storyTextContainer.add(timeText);
+                }
             }
         }
 

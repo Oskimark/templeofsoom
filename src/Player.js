@@ -224,7 +224,30 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     shoot() {
         this.ammo--;
-        this.scene.levelManager.fireBullet(this.x, this.y - 12);
+
+        let angle = -Math.PI / 2; // Default Up
+
+        // Auto-Aim in Level 11
+        if (this.scene.level >= 11) {
+            let nearestEnemy = null;
+            let minDist = 400;
+
+            this.scene.levelManager.enemies.getChildren().forEach(enemy => {
+                if (enemy.active && enemy.texture.key === 'ufo' && enemy.isPursuing) {
+                    const d = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestEnemy = enemy;
+                    }
+                }
+            });
+
+            if (nearestEnemy) {
+                angle = Phaser.Math.Angle.Between(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
+            }
+        }
+
+        this.scene.levelManager.fireBullet(this.x, this.y - 12, angle);
     }
 
     updatePlatformerMode(time, delta) {

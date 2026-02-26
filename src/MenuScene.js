@@ -35,11 +35,11 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Level Buttons
-        const levelNames = ['Volcán', 'Cielo', 'Espacio', 'Nave', 'Abismo', 'Muro', 'Eco', 'Foso', 'Fuga'];
-        const levelColors = [0xff4500, 0x4488ff, 0x8800ff, 0xffcc00, 0x00ff88, 0x330033, 0xffffff, 0xff0000, 0xffaa00];
+        const levelNames = ['Volcán', 'Cielo', 'Espacio', 'Nave', 'Abismo', 'Muro', 'Eco', 'Foso', 'Fuga', 'Voltaje', 'Cacería'];
+        const levelColors = [0xff4500, 0x4488ff, 0x8800ff, 0xffcc00, 0x00ff88, 0x330033, 0xffffff, 0xff0000, 0xffaa00, 0x00ffff, 0xccff00];
         const btnY = height - 70;
-        const btnSpacing = 62;
-        const startX = width / 2 - (btnSpacing * 4);
+        const btnSpacing = 52;
+        const startX = width / 2 - (btnSpacing * 5);
 
         // Story data for each level (shown BEFORE starting that level)
         const storyData = [
@@ -51,10 +51,12 @@ export default class MenuScene extends Phaser.Scene {
             { storyKey: 'levsh', title: 'INFRANQUEABLE', desc: 'Las barreras ahora son más\ngruesas y duras...\n¡No intentes dispararles!' },
             { storyKey: 'levsh', title: 'ECO DEL ABISMO', desc: 'El espacio se retuerce...\nLas aberturas no se quedan\nquietas. ¡Apunta bien!' },
             { storyKey: 'levsh', title: 'EL FOSO FINAL', desc: 'Los bordes brillan de rojo...\nUn roce significa la muerte.\n¡Precisión absoluta!' },
-            { storyKey: 'levsh', title: 'FUGA DESESPERADA', desc: '¡la onda expansiva se acerca!\nesto causa empujones al borde de plasma.\n¡Cuando todo se ponga amarillo, vuela más rápido que nunca!' }
+            { storyKey: 'levsh', title: 'FUGA DESESPERADA', desc: '¡la onda expansiva se acerca!\nesto causa empujones al borde de plasma.\n¡Cuando todo se ponga amarillo, vuela más rápido que nunca!' },
+            { storyKey: 'levsh', title: 'VOLTAJE CRÍTICO', desc: 'El sistema está en corto...\nRayos de plasma cierran el paso.\n¡Calcula bien el tiempo!' },
+            { storyKey: 'levsh', title: 'PERSECUCIÓN', desc: 'Los radares detectan OVNIs...\n¡Se acercan por detrás!\nUsa el auto-apuntado para\nsobrevivir a la cacería.' }
         ];
 
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 11; i++) {
             const bx = startX + i * btnSpacing;
             const level = i + 1;
 
@@ -124,6 +126,12 @@ export default class MenuScene extends Phaser.Scene {
         });
         this.input.keyboard.on('keydown-NINE', () => {
             this.startLevel(9, storyData[8]);
+        });
+        this.input.keyboard.on('keydown-ZERO', () => {
+            this.startLevel(10, storyData[9]);
+        });
+        this.input.keyboard.on('keydown-L', () => {
+            this.startLevel(11, storyData[10]);
         });
         this.input.keyboard.on('keydown-SPACE', () => {
             this.startLevel(1, storyData[0]);
