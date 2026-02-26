@@ -269,7 +269,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (!this.player.active) return;
+        if (!this.player.active || !this.isTimerRunning) return;
 
         this.player.update(time, delta);
         this.levelManager.update(this.cameras.main.scrollY, delta);
@@ -351,10 +351,8 @@ export default class MainScene extends Phaser.Scene {
         }
 
         // Update Timer
-        if (this.isTimerRunning) {
-            this.elapsedTime += delta;
-            this.timerText.setText(this.formatTime(this.elapsedTime));
-        }
+        this.elapsedTime += delta;
+        this.timerText.setText(this.formatTime(this.elapsedTime));
     }
 
     formatTime(ms) {
